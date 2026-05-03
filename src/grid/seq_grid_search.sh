@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Variable values explored by benchmark.sh
+N_VALUES=(50000000)
+P_VALUES=(256)
+SEED_VALUES=(13)
+MAX_KEY_VALUES=(1000000)
+PARTITION_THREAD_VALUES=(1)
+JOIN_THREAD_VALUES=(1)
