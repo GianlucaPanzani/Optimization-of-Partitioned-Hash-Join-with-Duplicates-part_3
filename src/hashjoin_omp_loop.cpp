@@ -716,11 +716,10 @@ int main(int argc, char** argv) {
         {"checksum1", std::to_string(result.checksum1)},
         {"checksum2", std::to_string(result.checksum2)},
         {"join_count", std::to_string(result.join_count)},
-        {"join_throughput", std::to_string(join_throughput)},
-        {"total_throughput", std::to_string(total_throughput)},
-        {"partition_time", std::to_string(result.part_time_sec)},
-        {"partition_throughput", std::to_string(part_throughput)},
-        {"join_time", std::to_string(result.join_time_sec)},
+        {"max_key", std::to_string(max_key)},
+        {"nr", std::to_string(NR)},
+        {"ns", std::to_string(NS)},
+        // OMP parameters
         {"partition_threads", std::to_string(cfg.partition_threads)},
         {"join_threads", std::to_string(cfg.join_threads)},
         {"partition_schedule", cfg.partition_schedule_name},
@@ -728,9 +727,12 @@ int main(int argc, char** argv) {
         {"partition_chunk", std::to_string(cfg.partition_chunk)},
         {"join_chunk", std::to_string(cfg.join_chunk)},
         {"partition_block_size", std::to_string(cfg.partition_block_size)},
-        {"max_key", std::to_string(max_key)},
-        {"nr", std::to_string(NR)},
-        {"ns", std::to_string(NS)},
+        // Results
+        {"partition_throughput", std::to_string(part_throughput)},
+        {"join_throughput", std::to_string(join_throughput)},
+        {"total_throughput", std::to_string(total_throughput)},
+        {"partition_time", std::to_string(result.part_time_sec)},
+        {"join_time", std::to_string(result.join_time_sec)},
         {"time_sec", std::to_string(tot_time_sec)}
     };
     const std::string filepath = "results/" + std::filesystem::path(argv[0]).stem().string() + ".csv";

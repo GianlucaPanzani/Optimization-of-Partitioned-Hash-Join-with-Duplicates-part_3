@@ -19,4 +19,4 @@ PARTITION_CHUNK_VALUES=(0 32)
 JOIN_CHUNK_VALUES=(0 32)
 
 # Block size used by the parallel partitioning implementation (for the block-based histogram/scatter phase)
-PARTITION_BLOCK_SIZE_VALUES=(32768 65536 131072)
+PARTITION_BLOCK_SIZE_VALUES=(32768 131072)
