@@ -107,6 +107,9 @@ case "$EXECUTABLE_TARGET" in
     hashjoin_omp_loop)
         make cleanall_omp_loop
         ;;
+    hashjoin_omp_task)
+        make cleanall_omp_task
+        ;;
     *)
         echo "Unknown executable target: $EXECUTABLE_TARGET"
         echo "Add the target to the Makefile and to benchmark.sh if needed."
