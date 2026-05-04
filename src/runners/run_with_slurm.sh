@@ -3,7 +3,7 @@
 #SBATCH --time=00:01:00
 #SBATCH --nodes=1
 #SBATCH --partition=normal
-#SBATCH --nodelist=node04
+#SBATCH --nodelist=node05
 #SBATCH --output=out/slurm-%j.log
 #SBATCH --error=err/slurm-%j.log
 
