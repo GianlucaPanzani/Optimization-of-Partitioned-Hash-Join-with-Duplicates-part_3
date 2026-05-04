@@ -9,8 +9,8 @@
 
 set -euo pipefail
 
-if [ "$#" -ne 13 ]; then
-    echo "Usage: $0 EXECUTABLE NR NS SEED MAX_KEY P PARTITION_THREADS JOIN_THREADS PARTITION_SCHEDULE JOIN_SCHEDULE PARTITION_CHUNK JOIN_CHUNK PARTITION_BLOCK_SIZE"
+if [ "$#" -ne 13 ] && [ "$#" -ne 16 ]; then
+    echo "Usage: $0 EXECUTABLE NR NS SEED MAX_KEY P PARTITION_THREADS JOIN_THREADS PARTITION_SCHEDULE JOIN_SCHEDULE PARTITION_CHUNK JOIN_CHUNK PARTITION_BLOCK_SIZE [PARTITION_TASK_GRAIN JOIN_TASK_GRAIN OFFSET_TASK_GRAIN]"
     exit 1
 fi
 
@@ -27,6 +27,9 @@ JOIN_SCHEDULE="${10}"
 PARTITION_CHUNK="${11}"
 JOIN_CHUNK="${12}"
 PARTITION_BLOCK_SIZE="${13}"
+PARTITION_TASK_GRAIN="${14:-}"
+JOIN_TASK_GRAIN="${15:-}"
+OFFSET_TASK_GRAIN="${16:-}"
 
 SUBMIT_DIR="${SLURM_SUBMIT_DIR:-$(pwd)}"
 cd "$SUBMIT_DIR"
@@ -48,16 +51,23 @@ fi
 export OMP_NUM_THREADS="$MAX_THREADS"
 export OMP_DISPLAY_ENV="${OMP_DISPLAY_ENV:-false}"
 
-"$EXECUTABLE" \
-    -nr "$NR" \
-    -ns "$NS" \
-    -seed "$SEED" \
-    -max-key "$MAX_KEY" \
-    -p "$P" \
-    --partition-threads "$PARTITION_THREADS" \
-    --join-threads "$JOIN_THREADS" \
-    --partition-schedule "$PARTITION_SCHEDULE" \
-    --join-schedule "$JOIN_SCHEDULE" \
-    --partition-chunk "$PARTITION_CHUNK" \
-    --join-chunk "$JOIN_CHUNK" \
+runner_args=(
+    "$EXECUTABLE"
+    -nr "$NR"
+    -ns "$NS"
+    -seed "$SEED"
+    -max-key "$MAX_KEY"
+    -p "$P"
+    --partition-threads "$PARTITION_THREADS"
+    --join-threads "$JOIN_THREADS"
+    --partition-schedule "$PARTITION_SCHEDULE"
+    --join-schedule "$JOIN_SCHEDULE"
+    --partition-chunk "$PARTITION_CHUNK"
+    --join-chunk "$JOIN_CHUNK"
     --partition-block-size "$PARTITION_BLOCK_SIZE"
+    --partition-task-grain "$PARTITION_TASK_GRAIN"
+    --join-task-grain "$JOIN_TASK_GRAIN"
+    --offset-task-grain "$OFFSET_TASK_GRAIN"
+)
+
+"${runner_args[@]}"

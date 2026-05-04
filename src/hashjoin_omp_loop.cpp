@@ -179,14 +179,6 @@ struct OmpConfig {
     std::string join_schedule_name = "static";
 };
 
-static bool parse_omp_schedule_kind(const std::string& s, omp_sched_t& kind) {
-    if (s == "static")  { kind = omp_sched_static;  return true; }
-    if (s == "dynamic") { kind = omp_sched_dynamic; return true; }
-    if (s == "guided")  { kind = omp_sched_guided;  return true; }
-    if (s == "auto")    { kind = omp_sched_auto;    return true; }
-    return false;
-}
-
 static int checked_thread_count(std::uint64_t value, const char* name) {
     if (value == 0 || value > static_cast<std::uint64_t>(std::numeric_limits<int>::max())) {
         throw std::runtime_error(std::string("Invalid ") + name + ": must be in [1, INT_MAX]");
@@ -607,64 +599,62 @@ static JoinResult naive_join_verifier(const std::vector<Record>& R,
 // Main
 // ------------------------------------------------------------
 int main(int argc, char** argv) {
-    std::uint64_t nr = 0, ns = 0, seed = 0, max_key = 0, p = 0;
-    std::uint64_t part_threads_u64 = static_cast<std::uint64_t>(omp_get_max_threads());
-    std::uint64_t join_threads_u64 = static_cast<std::uint64_t>(omp_get_max_threads());
+    std::uint64_t nr = 0;
+    std::uint64_t ns = 0;
+    std::uint64_t seed = 0;
+    std::uint64_t max_key = 0;
+    std::uint64_t p = 0;
+    std::uint64_t part_threads_u64 = 0;
+    std::uint64_t join_threads_u64 = 0;
     std::uint64_t partition_chunk_u64 = 0;
     std::uint64_t join_chunk_u64 = 0;
-    std::uint64_t partition_block_size_u64 = 65536;
-    std::string partition_schedule_name = "static";
-    std::string join_schedule_name = "static";
+    std::uint64_t partition_block_size_u64 = 0;
+
+    std::string partition_schedule_name;
+    std::string join_schedule_name;
 
     if (!read_arg_u64(argc, argv, {"-nr"}, nr) ||
         !read_arg_u64(argc, argv, {"-ns"}, ns) ||
         !read_arg_u64(argc, argv, {"-seed"}, seed) ||
         !read_arg_u64(argc, argv, {"-max-key"}, max_key) ||
-        !read_arg_u64(argc, argv, {"-p"}, p)) {
+        !read_arg_u64(argc, argv, {"-p"}, p) ||
+        !read_arg_u64(argc, argv, {"--partition-threads", "-partition-threads"}, part_threads_u64) ||
+        !read_arg_u64(argc, argv, {"--join-threads", "-join-threads"}, join_threads_u64) ||
+        !read_arg_string(argc, argv, {"--partition-schedule", "-partition-schedule"}, partition_schedule_name) ||
+        !read_arg_string(argc, argv, {"--join-schedule", "-join-schedule"}, join_schedule_name) ||
+        !read_arg_u64(argc, argv, {"--partition-chunk", "-partition-chunk"}, partition_chunk_u64) ||
+        !read_arg_u64(argc, argv, {"--join-chunk", "-join-chunk"}, join_chunk_u64) ||
+        !read_arg_u64(argc, argv, {"--partition-block-size", "-partition-block-size"}, partition_block_size_u64)) {
         usage(argv[0]);
         return 1;
     }
-    read_arg_u64(argc, argv, {"--partition-threads", "-partition-threads"}, part_threads_u64);
-    read_arg_u64(argc, argv, {"--join-threads", "-join-threads"}, join_threads_u64);
-    read_arg_u64(argc, argv, {"--partition-chunk", "-partition-chunk"}, partition_chunk_u64);
-    read_arg_u64(argc, argv, {"--join-chunk", "-join-chunk"}, join_chunk_u64);
-    read_arg_u64(argc, argv, {"--partition-block-size", "-partition-block-size"}, partition_block_size_u64);
-    read_arg_string(argc, argv, {"--partition-schedule", "-partition-schedule"}, partition_schedule_name);
-    read_arg_string(argc, argv, {"--join-schedule", "-join-schedule"}, join_schedule_name);
 
     if (p > std::numeric_limits<std::uint32_t>::max()) {
         std::cerr << "Error: P too large.\n";
         return 1;
     }
 
-    OmpConfig cfg{};
-    try {
-        cfg.partition_threads = checked_thread_count(part_threads_u64, "partition thread count");
-        cfg.join_threads = checked_thread_count(join_threads_u64, "join thread count");
-        cfg.partition_chunk = checked_chunk_size(partition_chunk_u64, "partition chunk size");
-        cfg.join_chunk = checked_chunk_size(join_chunk_u64, "join chunk size");
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << "\n";
-        return 1;
-    }
     if (partition_block_size_u64 == 0) {
         std::cerr << "Error: partition block size must be greater than zero.\n";
         return 1;
     }
+
+    OmpLoopConfig cfg{};
+    try {
+        cfg.partition_threads = checked_positive_int(part_threads_u64, "partition thread count");
+        cfg.join_threads = checked_positive_int(join_threads_u64, "join thread count");
+        cfg.partition_chunk = checked_nonnegative_int(partition_chunk_u64, "partition chunk size");
+        cfg.join_chunk = checked_nonnegative_int(join_chunk_u64, "join chunk size");
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << "\n";
+        return 1;
+    }
+
     cfg.partition_block_size = static_cast<std::size_t>(partition_block_size_u64);
+    cfg.partition_schedule = parse_schedule_kind(partition_schedule_name);
+    cfg.join_schedule = parse_schedule_kind(join_schedule_name);
     cfg.partition_schedule_name = partition_schedule_name;
     cfg.join_schedule_name = join_schedule_name;
-
-    if (!parse_omp_schedule_kind(partition_schedule_name, cfg.partition_schedule)) {
-        std::cerr << "Error: invalid partition schedule '" << partition_schedule_name
-                  << "'. Use static, dynamic, guided, or auto.\n";
-        return 1;
-    }
-    if (!parse_omp_schedule_kind(join_schedule_name, cfg.join_schedule)) {
-        std::cerr << "Error: invalid join schedule '" << join_schedule_name
-                  << "'. Use static, dynamic, guided, or auto.\n";
-        return 1;
-    }
 
     // Keep benchmark runs controlled. Affinity can still be set externally with
     // OMP_PROC_BIND and OMP_PLACES.

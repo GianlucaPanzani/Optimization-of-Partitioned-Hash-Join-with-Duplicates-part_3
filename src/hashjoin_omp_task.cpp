@@ -492,52 +492,64 @@ static JoinResult naive_join_verifier(const std::vector<Record>& R,
 // Main
 // ------------------------------------------------------------
 int main(int argc, char** argv) {
-    std::uint64_t nr = 0, ns = 0, seed = 0, max_key = 0, p = 0;
-    std::uint64_t part_threads_u64 = static_cast<std::uint64_t>(omp_get_max_threads());
-    std::uint64_t join_threads_u64 = static_cast<std::uint64_t>(omp_get_max_threads());
-    std::uint64_t partition_block_size_u64 = 65536;
-
+    std::uint64_t nr = 0;
+    std::uint64_t ns = 0;
+    std::uint64_t seed = 0;
+    std::uint64_t max_key = 0;
+    std::uint64_t p = 0;
+    std::uint64_t part_threads_u64 = 0;
+    std::uint64_t join_threads_u64 = 0;
+    std::uint64_t partition_block_size_u64 = 0;
     std::uint64_t partition_chunk_u64 = 0;
     std::uint64_t join_chunk_u64 = 0;
-    std::uint64_t partition_task_grain_u64 = 1;
-    std::uint64_t join_task_grain_u64 = 1;
-    std::uint64_t offset_task_grain_u64 = 1;
+    std::uint64_t partition_task_grain_u64 = 0;
+    std::uint64_t join_task_grain_u64 = 0;
+    std::uint64_t offset_task_grain_u64 = 0;
 
-    std::string partition_schedule_name = "taskloop";
-    std::string join_schedule_name = "taskloop";
+    std::string partition_schedule_name;
+    std::string join_schedule_name;
 
     if (!read_arg_u64(argc, argv, {"-nr"}, nr) ||
         !read_arg_u64(argc, argv, {"-ns"}, ns) ||
         !read_arg_u64(argc, argv, {"-seed"}, seed) ||
         !read_arg_u64(argc, argv, {"-max-key"}, max_key) ||
-        !read_arg_u64(argc, argv, {"-p"}, p)) {
+        !read_arg_u64(argc, argv, {"-p"}, p) ||
+        !read_arg_u64(argc, argv, {"--partition-threads", "-partition-threads"}, part_threads_u64) ||
+        !read_arg_u64(argc, argv, {"--join-threads", "-join-threads"}, join_threads_u64) ||
+        !read_arg_string(argc, argv, {"--partition-schedule", "-partition-schedule"}, partition_schedule_name) ||
+        !read_arg_string(argc, argv, {"--join-schedule", "-join-schedule"}, join_schedule_name) ||
+        !read_arg_u64(argc, argv, {"--partition-chunk", "-partition-chunk"}, partition_chunk_u64) ||
+        !read_arg_u64(argc, argv, {"--join-chunk", "-join-chunk"}, join_chunk_u64) ||
+        !read_arg_u64(argc, argv, {"--partition-block-size", "-partition-block-size"}, partition_block_size_u64) ||
+        !read_arg_u64(argc, argv, {"--partition-task-grain", "-partition-task-grain"}, partition_task_grain_u64) ||
+        !read_arg_u64(argc, argv, {"--join-task-grain", "-join-task-grain"}, join_task_grain_u64) ||
+        !read_arg_u64(argc, argv, {"--offset-task-grain", "-offset-task-grain"}, offset_task_grain_u64)) {
         usage(argv[0]);
         return 1;
     }
-
-    read_arg_u64(argc, argv, {"--partition-threads", "-partition-threads"}, part_threads_u64);
-    read_arg_u64(argc, argv, {"--join-threads", "-join-threads"}, join_threads_u64);
-    read_arg_u64(argc, argv, {"--partition-block-size", "-partition-block-size"}, partition_block_size_u64);
-
-    // Compatibility with the loop benchmark runner.
-    read_arg_u64(argc, argv, {"--partition-chunk", "-partition-chunk"}, partition_chunk_u64);
-    read_arg_u64(argc, argv, {"--join-chunk", "-join-chunk"}, join_chunk_u64);
-    read_arg_string(argc, argv, {"--partition-schedule", "-partition-schedule"}, partition_schedule_name);
-    read_arg_string(argc, argv, {"--join-schedule", "-join-schedule"}, join_schedule_name);
-
-    // Task-specific parameters. If not provided, non-zero chunk values are used
-    // as the corresponding taskloop grainsize, so the existing bash grid can be
-    // reused with minimal changes.
-    const bool has_partition_task_grain = read_arg_u64(argc, argv, {"--partition-task-grain", "-partition-task-grain"}, partition_task_grain_u64);
-    const bool has_join_task_grain = read_arg_u64(argc, argv, {"--join-task-grain", "-join-task-grain"}, join_task_grain_u64);
-    const bool has_offset_task_grain = read_arg_u64(argc, argv, {"--offset-task-grain", "-offset-task-grain"}, offset_task_grain_u64);
 
     if (p > std::numeric_limits<std::uint32_t>::max()) {
         std::cerr << "Error: P too large.\n";
         return 1;
     }
+
     if (partition_block_size_u64 == 0) {
         std::cerr << "Error: partition block size must be greater than zero.\n";
+        return 1;
+    }
+
+    if (partition_task_grain_u64 == 0) {
+        std::cerr << "Error: partition task grain must be greater than zero.\n";
+        return 1;
+    }
+
+    if (join_task_grain_u64 == 0) {
+        std::cerr << "Error: join task grain must be greater than zero.\n";
+        return 1;
+    }
+
+    if (offset_task_grain_u64 == 0) {
+        std::cerr << "Error: offset task grain must be greater than zero.\n";
         return 1;
     }
 
@@ -545,19 +557,23 @@ int main(int argc, char** argv) {
     try {
         cfg.partition_threads = checked_positive_int(part_threads_u64, "partition thread count");
         cfg.join_threads = checked_positive_int(join_threads_u64, "join thread count");
+
+        // Kept for compatibility/logging with the same benchmark runner as omp_loop.
         cfg.partition_chunk = checked_nonnegative_int(partition_chunk_u64, "partition chunk size");
         cfg.join_chunk = checked_nonnegative_int(join_chunk_u64, "join chunk size");
-        cfg.partition_task_grain = grain_from_optional(partition_task_grain_u64, has_partition_task_grain, partition_chunk_u64, "partition task grain");
-        cfg.join_task_grain = grain_from_optional(join_task_grain_u64, has_join_task_grain, join_chunk_u64, "join task grain");
-        cfg.offset_task_grain = grain_from_optional(offset_task_grain_u64, has_offset_task_grain, 1, "offset task grain");
+
+        // Real task-specific granularities.
+        cfg.partition_task_grain = checked_positive_int(partition_task_grain_u64, "partition task grain");
+        cfg.join_task_grain = checked_positive_int(join_task_grain_u64, "join task grain");
+        cfg.offset_task_grain = checked_positive_int(offset_task_grain_u64, "offset task grain");
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";
         return 1;
     }
 
     cfg.partition_block_size = static_cast<std::size_t>(partition_block_size_u64);
-    cfg.partition_schedule_name = partition_schedule_name;
-    cfg.join_schedule_name = join_schedule_name;
+    cfg.partition_schedule_name = parse_schedule_kind(partition_schedule_name);
+    cfg.join_schedule_name = parse_schedule_kind(join_schedule_name);
 
     // Keep benchmark runs controlled. Affinity can still be set externally with
     // OMP_PROC_BIND and OMP_PLACES.

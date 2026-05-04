@@ -91,6 +91,9 @@ REQUIRED_ARRAYS=(
     PARTITION_CHUNK_VALUES
     JOIN_CHUNK_VALUES
     PARTITION_BLOCK_SIZE_VALUES
+    PARTITION_TASK_GRAIN_VALUES
+    JOIN_TASK_GRAIN_VALUES
+    OFFSET_TASK_GRAIN_VALUES
 )
 
 for ARRAY_NAME in "${REQUIRED_ARRAYS[@]}"; do
@@ -143,6 +146,9 @@ TOTAL=$(( \
     ${#PARTITION_CHUNK_VALUES[@]} * \
     ${#JOIN_CHUNK_VALUES[@]} * \
     ${#PARTITION_BLOCK_SIZE_VALUES[@]} * \
+    ${#PARTITION_TASK_GRAIN_VALUES[@]} * \
+    ${#JOIN_TASK_GRAIN_VALUES[@]} * \
+    ${#OFFSET_TASK_GRAIN_VALUES[@]} * \
     REPEAT_COUNT \
 ))
 
@@ -162,6 +168,9 @@ echo "Join schedule values:        ${JOIN_SCHEDULE_VALUES[*]}"
 echo "Partition chunk values:      ${PARTITION_CHUNK_VALUES[*]}"
 echo "Join chunk values:           ${JOIN_CHUNK_VALUES[*]}"
 echo "Partition block-size values: ${PARTITION_BLOCK_SIZE_VALUES[*]}"
+echo "Partition task-grain values: ${PARTITION_TASK_GRAIN_VALUES[*]}"
+echo "Join task-grain values:      ${JOIN_TASK_GRAIN_VALUES[*]}"
+echo "Offset task-grain values:    ${OFFSET_TASK_GRAIN_VALUES[*]}"
 echo "Repeat count:                $REPEAT_COUNT"
 echo "Total runs:                  $TOTAL"
 echo
@@ -178,30 +187,44 @@ for ((RUN_INDEX=1; RUN_INDEX<=REPEAT_COUNT; RUN_INDEX++)); do
                                     for PARTITION_CHUNK in "${PARTITION_CHUNK_VALUES[@]}"; do
                                         for JOIN_CHUNK in "${JOIN_CHUNK_VALUES[@]}"; do
                                             for PARTITION_BLOCK_SIZE in "${PARTITION_BLOCK_SIZE_VALUES[@]}"; do
+                                                for PARTITION_TASK_GRAIN in "${PARTITION_TASK_GRAIN_VALUES[@]}"; do
+                                                    for JOIN_TASK_GRAIN in "${JOIN_TASK_GRAIN_VALUES[@]}"; do
+                                                        for OFFSET_TASK_GRAIN in "${OFFSET_TASK_GRAIN_VALUES[@]}"; do
 
-                                                COUNT=$((COUNT + 1))
+                                                            COUNT=$((COUNT + 1))
 
-                                                printf '[%d/%d] run=%d/%d N=%s P=%s seed=%s max_key=%s p_threads=%s j_threads=%s p_sched=%s j_sched=%s p_chunk=%s j_chunk=%s p_block=%s --> ' \
-                                                    "$COUNT" "$TOTAL" "$RUN_INDEX" "$REPEAT_COUNT" "$N" "$P" "$SEED" "$MAX_KEY" \
-                                                    "$PARTITION_THREADS" "$JOIN_THREADS" "$PARTITION_SCHEDULE" "$JOIN_SCHEDULE" \
-                                                    "$PARTITION_CHUNK" "$JOIN_CHUNK" "$PARTITION_BLOCK_SIZE"
+                                                            printf '[%d/%d] run=%d/%d N=%s P=%s seed=%s max_key=%s p_threads=%s j_threads=%s p_sched=%s j_sched=%s \
+                                                                p_chunk=%s j_chunk=%s p_block=%s p_task_grain=%s j_task_grain=%s offset_task_grain=%s --> ' \
+                                                                "$COUNT" "$TOTAL" "$RUN_INDEX" "$REPEAT_COUNT" "$N" "$P" "$SEED" "$MAX_KEY" \
+                                                                "$PARTITION_THREADS" "$JOIN_THREADS" "$PARTITION_SCHEDULE" "$JOIN_SCHEDULE" \
+                                                                "$PARTITION_CHUNK" "$JOIN_CHUNK" "$PARTITION_BLOCK_SIZE" "$PARTITION_TASK_GRAIN" \
+                                                                "$JOIN_TASK_GRAIN" "$OFFSET_TASK_GRAIN"
 
-                                                sbatch --parsable --wait \
-                                                    "$RUNNER_SCRIPT" \
-                                                    "$EXECUTABLE" \
-                                                    "$N" \
-                                                    "$N" \
-                                                    "$SEED" \
-                                                    "$MAX_KEY" \
-                                                    "$P" \
-                                                    "$PARTITION_THREADS" \
-                                                    "$JOIN_THREADS" \
-                                                    "$PARTITION_SCHEDULE" \
-                                                    "$JOIN_SCHEDULE" \
-                                                    "$PARTITION_CHUNK" \
-                                                    "$JOIN_CHUNK" \
-                                                    "$PARTITION_BLOCK_SIZE"
+                                                            runner_args=(
+                                                                "$RUNNER_SCRIPT"
+                                                                "$EXECUTABLE"
+                                                                "$N"
+                                                                "$N"
+                                                                "$SEED"
+                                                                "$MAX_KEY"
+                                                                "$P"
+                                                                "$PARTITION_THREADS"
+                                                                "$JOIN_THREADS"
+                                                                "$PARTITION_SCHEDULE"
+                                                                "$JOIN_SCHEDULE"
+                                                                "$PARTITION_CHUNK"
+                                                                "$JOIN_CHUNK"
+                                                                "$PARTITION_BLOCK_SIZE"
+                                                                "$PARTITION_TASK_GRAIN"
+                                                                "$JOIN_TASK_GRAIN"
+                                                                "$OFFSET_TASK_GRAIN"
+                                                            )
 
+                                                            sbatch --parsable --wait "${runner_args[@]}"
+
+                                                        done
+                                                    done
+                                                done
                                             done
                                         done
                                     done
@@ -217,11 +240,7 @@ done
 
 echo
 
-if make -n checker >/dev/null 2>&1; then
-    make checker
-    ./checker
-else
-    echo "No checker target found; skipping checker."
-fi
+make checker
+./checker
 
 make clean

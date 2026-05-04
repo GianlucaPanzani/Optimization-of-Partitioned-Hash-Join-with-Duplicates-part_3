@@ -459,12 +459,12 @@ int main(int argc, char** argv) {
         !read_arg_u64(argc, argv, {"-ns"}, ns) ||
         !read_arg_u64(argc, argv, {"-seed"}, seed) ||
         !read_arg_u64(argc, argv, {"-max-key"}, max_key) ||
-        !read_arg_u64(argc, argv, {"-p"}, p)) {
+        !read_arg_u64(argc, argv, {"-p"}, p) ||
+        !read_arg_u64(argc, argv, {"--partition-threads", "-partition-threads"}, part_threads) ||
+        !read_arg_u64(argc, argv, {"--join-threads", "-join-threads"}, join_threads)) {
         usage(argv[0]);
         return 1;
     }
-    read_arg_u64(argc, argv, {"--partition-threads", "-partition-threads"}, part_threads);
-    read_arg_u64(argc, argv, {"--join-threads", "-join-threads"}, join_threads);
 
     if (p > std::numeric_limits<std::uint32_t>::max()) {
         std::cerr << "Error: P too large.\n";

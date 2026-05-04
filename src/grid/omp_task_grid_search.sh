@@ -18,6 +18,10 @@ PARTITION_CHUNK_VALUES=(0 32)
 JOIN_CHUNK_VALUES=(0 32)
 # Block size used by the parallel partitioning implementation (for the block-based histogram/scatter phase)
 PARTITION_BLOCK_SIZE_VALUES=(32768 131072)
+# Taskloop grains (partition_task_grain measured in input blocks, join/offset grains measured in partitions)
+PARTITION_TASK_GRAIN_VALUES=(1 32)
+JOIN_TASK_GRAIN_VALUES=(1 32)
+OFFSET_TASK_GRAIN_VALUES=(1)
 
 # --- Reduced OMP combinations ---
 # OpenMP thread configurations
@@ -31,3 +35,7 @@ PARTITION_CHUNK_VALUES=(0 8)
 JOIN_CHUNK_VALUES=(0 8)
 # Block size used by the parallel partitioning implementation (for the block-based histogram/scatter phase)
 PARTITION_BLOCK_SIZE_VALUES=(16384 32768)
+# Taskloop grains (partition_task_grain measured in input blocks, join/offset grains measured in partitions)
+PARTITION_TASK_GRAIN_VALUES=(1 32)
+JOIN_TASK_GRAIN_VALUES=(1 32)
+OFFSET_TASK_GRAIN_VALUES=(1 32)

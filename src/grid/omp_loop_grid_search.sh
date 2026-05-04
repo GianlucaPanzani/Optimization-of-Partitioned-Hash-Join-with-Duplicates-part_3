@@ -31,3 +31,9 @@ PARTITION_CHUNK_VALUES=(0 8)
 JOIN_CHUNK_VALUES=(0 8)
 # Block size used by the parallel partitioning implementation (for the block-based histogram/scatter phase)
 PARTITION_BLOCK_SIZE_VALUES=(16384 32768)
+
+
+# --- Unused parameters for the OMP loop version ---
+PARTITION_TASK_GRAIN_VALUES=(1)
+JOIN_TASK_GRAIN_VALUES=(1)
+OFFSET_TASK_GRAIN_VALUES=(1)
