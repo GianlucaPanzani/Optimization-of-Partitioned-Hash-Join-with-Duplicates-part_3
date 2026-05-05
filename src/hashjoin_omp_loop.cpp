@@ -167,7 +167,7 @@ static bool is_power_of_two(std::uint32_t x) {
 // one global OMP_SCHEDULE value for all phases: the partitioning and join
 // phases can be tuned independently.
 //
-struct OmpConfig {
+struct OmpLoopConfig {
     int partition_threads = 1;
     int join_threads = 1;
     omp_sched_t partition_schedule = omp_sched_static;
@@ -179,14 +179,22 @@ struct OmpConfig {
     std::string join_schedule_name = "static";
 };
 
-static int checked_thread_count(std::uint64_t value, const char* name) {
+static bool parse_omp_schedule_kind(const std::string& s, omp_sched_t& kind) {
+    if (s == "static")  { kind = omp_sched_static;  return true; }
+    if (s == "dynamic") { kind = omp_sched_dynamic; return true; }
+    if (s == "guided")  { kind = omp_sched_guided;  return true; }
+    if (s == "auto")    { kind = omp_sched_auto;    return true; }
+    return false;
+}
+
+static int checked_positive_int(std::uint64_t value, const char* name) {
     if (value == 0 || value > static_cast<std::uint64_t>(std::numeric_limits<int>::max())) {
         throw std::runtime_error(std::string("Invalid ") + name + ": must be in [1, INT_MAX]");
     }
     return static_cast<int>(value);
 }
 
-static int checked_chunk_size(std::uint64_t value, const char* name) {
+static int checked_nonnegative_int(std::uint64_t value, const char* name) {
     if (value > static_cast<std::uint64_t>(std::numeric_limits<int>::max())) {
         throw std::runtime_error(std::string("Invalid ") + name + ": too large");
     }
@@ -651,8 +659,8 @@ int main(int argc, char** argv) {
     }
 
     cfg.partition_block_size = static_cast<std::size_t>(partition_block_size_u64);
-    cfg.partition_schedule = parse_schedule_kind(partition_schedule_name);
-    cfg.join_schedule = parse_schedule_kind(join_schedule_name);
+    cfg.partition_schedule = parse_omp_schedule_kind(partition_schedule_name);
+    cfg.join_schedule = parse_omp_schedule_kind(join_schedule_name);
     cfg.partition_schedule_name = partition_schedule_name;
     cfg.join_schedule_name = join_schedule_name;
 
