@@ -21,18 +21,12 @@ OFFSET_TASK_GRAIN_VALUES=(1)
 # OpenMP thread configurations
 PARTITION_THREAD_VALUES=(64)
 JOIN_THREAD_VALUES=(32 64)
-# Supported by hashjoin_omp_loop.cpp: static | dynamic | guided | auto
-#PARTITION_SCHEDULE_VALUES=(static)
-#JOIN_SCHEDULE_VALUES=(static)
-# Use 0 to mean "no explicit chunk" (e.g. schedule(static) instead of schedule(static,chunk))
-PARTITION_CHUNK_VALUES=(0 8)
-JOIN_CHUNK_VALUES=(0 8)
 # Block size used by the parallel partitioning implementation (for the block-based histogram/scatter phase)
 PARTITION_BLOCK_SIZE_VALUES=(16384 32768)
 # Taskloop grains (partition_task_grain measured in input blocks, join/offset grains measured in partitions)
-PARTITION_TASK_GRAIN_VALUES=(1 32)
-JOIN_TASK_GRAIN_VALUES=(1 32)
-OFFSET_TASK_GRAIN_VALUES=(1 32)
+PARTITION_TASK_GRAIN_VALUES=(1 4 8)
+JOIN_TASK_GRAIN_VALUES=(1 4 8)
+OFFSET_TASK_GRAIN_VALUES=(1 2 4)
 
 # --- Unused parameters for the OMP loop version ---
 PARTITION_SCHEDULE_VALUES=(auto)
