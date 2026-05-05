@@ -24,9 +24,9 @@ JOIN_THREAD_VALUES=(32 64)
 # Block size used by the parallel partitioning implementation (for the block-based histogram/scatter phase)
 PARTITION_BLOCK_SIZE_VALUES=(16384 32768)
 # Taskloop grains (partition_task_grain measured in input blocks, join/offset grains measured in partitions)
-PARTITION_TASK_GRAIN_VALUES=(1 4 8)
-JOIN_TASK_GRAIN_VALUES=(1 4 8)
-OFFSET_TASK_GRAIN_VALUES=(1 2 4)
+PARTITION_TASK_GRAIN_VALUES=(2 4)
+JOIN_TASK_GRAIN_VALUES=(8 16)
+OFFSET_TASK_GRAIN_VALUES=(2 4 8)
 
 # --- Unused parameters for the OMP loop version ---
 PARTITION_SCHEDULE_VALUES=(auto)
