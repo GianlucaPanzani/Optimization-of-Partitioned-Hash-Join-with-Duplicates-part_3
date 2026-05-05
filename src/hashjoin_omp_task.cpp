@@ -572,8 +572,8 @@ int main(int argc, char** argv) {
     }
 
     cfg.partition_block_size = static_cast<std::size_t>(partition_block_size_u64);
-    cfg.partition_schedule_name = parse_schedule_kind(partition_schedule_name);
-    cfg.join_schedule_name = parse_schedule_kind(join_schedule_name);
+    cfg.partition_schedule_name = partition_schedule_name;
+    cfg.join_schedule_name = join_schedule_name;
 
     // Keep benchmark runs controlled. Affinity can still be set externally with
     // OMP_PROC_BIND and OMP_PLACES.

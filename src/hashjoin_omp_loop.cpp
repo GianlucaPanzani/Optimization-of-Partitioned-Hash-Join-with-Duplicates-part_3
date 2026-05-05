@@ -179,12 +179,12 @@ struct OmpLoopConfig {
     std::string join_schedule_name = "static";
 };
 
-static bool parse_omp_schedule_kind(const std::string& s, omp_sched_t& kind) {
-    if (s == "static")  { kind = omp_sched_static;  return true; }
-    if (s == "dynamic") { kind = omp_sched_dynamic; return true; }
-    if (s == "guided")  { kind = omp_sched_guided;  return true; }
-    if (s == "auto")    { kind = omp_sched_auto;    return true; }
-    return false;
+static omp_sched_t parse_omp_schedule_kind(const std::string& s) {
+    if (s == "static")  { return omp_sched_static;  }
+    if (s == "dynamic") { return omp_sched_dynamic; }
+    if (s == "guided")  { return omp_sched_guided;  }
+    if (s == "auto")    { return omp_sched_auto;    }
+    throw std::runtime_error("Invalid OMP schedule kind");
 }
 
 static int checked_positive_int(std::uint64_t value, const char* name) {
@@ -281,7 +281,7 @@ struct HistogramResult {
 
 static HistogramResult compute_histogram(const std::vector<Record>& data,
                                          std::uint32_t P,
-                                         const OmpConfig& cfg) {
+                                         const OmpLoopConfig& cfg) {
     const std::size_t n = data.size();
     const std::size_t block_size = cfg.partition_block_size;
     const std::size_t num_blocks = (n + block_size - 1) / block_size;
@@ -357,7 +357,7 @@ static std::vector<Record> scatter_partitioned(const std::vector<Record>& data,
                                                std::uint32_t P,
                                                const std::vector<std::size_t>& begin,
                                                const HistogramResult& hist_result,
-                                               const OmpConfig& cfg) {
+                                               const OmpLoopConfig& cfg) {
     std::vector<Record> out(data.size());
 
     const std::size_t num_blocks = hist_result.num_blocks;
@@ -429,7 +429,7 @@ struct PartitionedRelation {
 //
 static PartitionedRelation partition_relation(const std::vector<Record>& rel,
                                               std::uint32_t P,
-                                              const OmpConfig& cfg) {
+                                              const OmpLoopConfig& cfg) {
     const auto hist_result = compute_histogram(rel, P, cfg);
     const auto begin = exclusive_prefix_sum(hist_result.hist);
     auto data = scatter_partitioned(rel, P, begin, hist_result, cfg);
@@ -541,7 +541,7 @@ static JoinResult join_one_partition(const PartitionedRelation& Rpart,
 static JoinResult partitioned_hash_join(const std::vector<Record>& R,
                                         const std::vector<Record>& S,
                                         std::uint32_t p,
-                                        const OmpConfig& cfg) {
+                                        const OmpLoopConfig& cfg) {
     JoinResult result{};
 
     // Phase 1: partition both relations.
