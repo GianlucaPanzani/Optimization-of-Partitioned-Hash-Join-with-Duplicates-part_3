@@ -193,8 +193,7 @@ for ((RUN_INDEX=1; RUN_INDEX<=REPEAT_COUNT; RUN_INDEX++)); do
 
                                                             COUNT=$((COUNT + 1))
 
-                                                            printf '[%d/%d] run=%d/%d N=%s P=%s seed=%s max_key=%s p_threads=%s j_threads=%s p_sched=%s j_sched=%s \
-                                                                p_chunk=%s j_chunk=%s p_block=%s p_task_grain=%s j_task_grain=%s offset_task_grain=%s --> ' \
+                                                            printf '[%d/%d] run=%d/%d N=%s P=%s seed=%s max_key=%s p_threads=%s j_threads=%s p_sched=%s j_sched=%s p_chunk=%s j_chunk=%s p_block=%s p_task_grain=%s j_task_grain=%s offset_task_grain=%s --> ' \
                                                                 "$COUNT" "$TOTAL" "$RUN_INDEX" "$REPEAT_COUNT" "$N" "$P" "$SEED" "$MAX_KEY" \
                                                                 "$PARTITION_THREADS" "$JOIN_THREADS" "$PARTITION_SCHEDULE" "$JOIN_SCHEDULE" \
                                                                 "$PARTITION_CHUNK" "$JOIN_CHUNK" "$PARTITION_BLOCK_SIZE" "$PARTITION_TASK_GRAIN" \
