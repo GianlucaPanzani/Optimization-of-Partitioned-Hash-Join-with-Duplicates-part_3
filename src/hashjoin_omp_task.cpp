@@ -715,6 +715,7 @@ int main(int argc, char** argv) {
     double t1 = get_time();
     const double tot_time_sec = t1 - t0;
 
+    std::cout << "dataset-type=" << dataset_cfg.type << "\n";
     std::cout << "join_count=" << result.join_count << "\n";
     std::cout << "checksum1=" << result.checksum1 << "\n";
     std::cout << "checksum2=" << result.checksum2 << "\n";
