@@ -25,7 +25,7 @@ JOIN_THREAD_VALUES=(32 64)
 PARTITION_BLOCK_SIZE_VALUES=(16384 32768)
 # Taskloop grains (partition_task_grain measured in input blocks, join/offset grains measured in partitions)
 PARTITION_TASK_GRAIN_VALUES=(2 4)
-JOIN_TASK_GRAIN_VALUES=(8 16)
+JOIN_TASK_GRAIN_VALUES=(4 8)
 OFFSET_TASK_GRAIN_VALUES=(2 4 8)
 
 # --- Unused parameters for the OMP loop version ---
