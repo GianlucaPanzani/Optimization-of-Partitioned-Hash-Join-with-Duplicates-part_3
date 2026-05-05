@@ -84,6 +84,7 @@ REQUIRED_ARRAYS=(
     P_VALUES
     SEED_VALUES
     MAX_KEY_VALUES
+    DATASET_TYPE_VALUES
     PARTITION_THREAD_VALUES
     JOIN_THREAD_VALUES
     PARTITION_SCHEDULE_VALUES
@@ -139,6 +140,7 @@ TOTAL=$(( \
     ${#P_VALUES[@]} * \
     ${#SEED_VALUES[@]} * \
     ${#MAX_KEY_VALUES[@]} * \
+    ${#DATASET_TYPE_VALUES[@]} * \
     ${#PARTITION_THREAD_VALUES[@]} * \
     ${#JOIN_THREAD_VALUES[@]} * \
     ${#PARTITION_SCHEDULE_VALUES[@]} * \
@@ -161,6 +163,7 @@ echo "N values:                    ${N_VALUES[*]}"
 echo "P values:                    ${P_VALUES[*]}"
 echo "Seeds:                       ${SEED_VALUES[*]}"
 echo "Max-key values:              ${MAX_KEY_VALUES[*]}"
+echo "Dataset-type values:         ${DATASET_TYPE_VALUES[*]}"
 echo "Partition thread values:     ${PARTITION_THREAD_VALUES[*]}"
 echo "Join thread values:          ${JOIN_THREAD_VALUES[*]}"
 echo "Partition schedule values:   ${PARTITION_SCHEDULE_VALUES[*]}"
@@ -180,21 +183,22 @@ for ((RUN_INDEX=1; RUN_INDEX<=REPEAT_COUNT; RUN_INDEX++)); do
         for P in "${P_VALUES[@]}"; do
             for SEED in "${SEED_VALUES[@]}"; do
                 for MAX_KEY in "${MAX_KEY_VALUES[@]}"; do
-                    for PARTITION_THREADS in "${PARTITION_THREAD_VALUES[@]}"; do
-                        for JOIN_THREADS in "${JOIN_THREAD_VALUES[@]}"; do
-                            for PARTITION_SCHEDULE in "${PARTITION_SCHEDULE_VALUES[@]}"; do
-                                for JOIN_SCHEDULE in "${JOIN_SCHEDULE_VALUES[@]}"; do
-                                    for PARTITION_CHUNK in "${PARTITION_CHUNK_VALUES[@]}"; do
-                                        for JOIN_CHUNK in "${JOIN_CHUNK_VALUES[@]}"; do
-                                            for PARTITION_BLOCK_SIZE in "${PARTITION_BLOCK_SIZE_VALUES[@]}"; do
-                                                for PARTITION_TASK_GRAIN in "${PARTITION_TASK_GRAIN_VALUES[@]}"; do
-                                                    for JOIN_TASK_GRAIN in "${JOIN_TASK_GRAIN_VALUES[@]}"; do
-                                                        for OFFSET_TASK_GRAIN in "${OFFSET_TASK_GRAIN_VALUES[@]}"; do
+                    for DATASET_TYPE in "${DATASET_TYPE_VALUES[@]}"; do
+                        for PARTITION_THREADS in "${PARTITION_THREAD_VALUES[@]}"; do
+                            for JOIN_THREADS in "${JOIN_THREAD_VALUES[@]}"; do
+                                for PARTITION_SCHEDULE in "${PARTITION_SCHEDULE_VALUES[@]}"; do
+                                    for JOIN_SCHEDULE in "${JOIN_SCHEDULE_VALUES[@]}"; do
+                                        for PARTITION_CHUNK in "${PARTITION_CHUNK_VALUES[@]}"; do
+                                            for JOIN_CHUNK in "${JOIN_CHUNK_VALUES[@]}"; do
+                                                for PARTITION_BLOCK_SIZE in "${PARTITION_BLOCK_SIZE_VALUES[@]}"; do
+                                                    for PARTITION_TASK_GRAIN in "${PARTITION_TASK_GRAIN_VALUES[@]}"; do
+                                                        for JOIN_TASK_GRAIN in "${JOIN_TASK_GRAIN_VALUES[@]}"; do
+                                                            for OFFSET_TASK_GRAIN in "${OFFSET_TASK_GRAIN_VALUES[@]}"; do
 
                                                             COUNT=$((COUNT + 1))
 
-                                                            printf '[%d/%d] run=%d/%d N=%s P=%s seed=%s max_key=%s p_threads=%s j_threads=%s p_sched=%s j_sched=%s p_chunk=%s j_chunk=%s p_block=%s p_task_grain=%s j_task_grain=%s offset_task_grain=%s --> ' \
-                                                                "$COUNT" "$TOTAL" "$RUN_INDEX" "$REPEAT_COUNT" "$N" "$P" "$SEED" "$MAX_KEY" \
+                                                            printf '[%d/%d] run=%d/%d N=%s P=%s seed=%s max_key=%s dataset_type=%s p_threads=%s j_threads=%s p_sched=%s j_sched=%s p_chunk=%s j_chunk=%s p_block=%s p_task_grain=%s j_task_grain=%s offset_task_grain=%s --> ' \
+                                                                "$COUNT" "$TOTAL" "$RUN_INDEX" "$REPEAT_COUNT" "$N" "$P" "$SEED" "$MAX_KEY" "$DATASET_TYPE" \
                                                                 "$PARTITION_THREADS" "$JOIN_THREADS" "$PARTITION_SCHEDULE" "$JOIN_SCHEDULE" \
                                                                 "$PARTITION_CHUNK" "$JOIN_CHUNK" "$PARTITION_BLOCK_SIZE" "$PARTITION_TASK_GRAIN" \
                                                                 "$JOIN_TASK_GRAIN" "$OFFSET_TASK_GRAIN"
@@ -207,6 +211,7 @@ for ((RUN_INDEX=1; RUN_INDEX<=REPEAT_COUNT; RUN_INDEX++)); do
                                                                 "$SEED"
                                                                 "$MAX_KEY"
                                                                 "$P"
+                                                                "$DATASET_TYPE"
                                                                 "$PARTITION_THREADS"
                                                                 "$JOIN_THREADS"
                                                                 "$PARTITION_SCHEDULE"
@@ -221,6 +226,7 @@ for ((RUN_INDEX=1; RUN_INDEX<=REPEAT_COUNT; RUN_INDEX++)); do
 
                                                             sbatch --parsable --wait "${runner_args[@]}"
 
+                                                            done
                                                         done
                                                     done
                                                 done

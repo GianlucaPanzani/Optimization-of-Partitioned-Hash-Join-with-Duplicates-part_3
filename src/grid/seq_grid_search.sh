@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Variable values explored by benchmark.sh
+# Static parameters
 N_VALUES=(50000000)
 P_VALUES=(256)
 SEED_VALUES=(13)
@@ -8,6 +8,8 @@ MAX_KEY_VALUES=(1000000)
 PARTITION_THREAD_VALUES=(1)
 JOIN_THREAD_VALUES=(1)
 
+# Dataset distributions type (e.g. skewed_80_5 means 80% of records go to 5% of the partitions)
+DATASET_TYPE_VALUES=(uniform skewed_80_5 skewed_90_10)
 
 # --- Unused parameters for the sequential version ---
 PARTITION_SCHEDULE_VALUES=(static)
