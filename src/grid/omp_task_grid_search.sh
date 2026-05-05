@@ -10,12 +10,6 @@ MAX_KEY_VALUES=(1000000)
 # OpenMP thread configurations
 PARTITION_THREAD_VALUES=(16 32 64)
 JOIN_THREAD_VALUES=(16 32 64)
-# Supported by hashjoin_omp_loop.cpp: static | dynamic | guided | auto
-PARTITION_SCHEDULE_VALUES=(static guided)
-JOIN_SCHEDULE_VALUES=(static guided)
-# Use 0 to mean "no explicit chunk" (e.g. schedule(static) instead of schedule(static,chunk))
-PARTITION_CHUNK_VALUES=(0 32)
-JOIN_CHUNK_VALUES=(0 32)
 # Block size used by the parallel partitioning implementation (for the block-based histogram/scatter phase)
 PARTITION_BLOCK_SIZE_VALUES=(32768 131072)
 # Taskloop grains (partition_task_grain measured in input blocks, join/offset grains measured in partitions)
@@ -39,3 +33,9 @@ PARTITION_BLOCK_SIZE_VALUES=(16384 32768)
 PARTITION_TASK_GRAIN_VALUES=(1 32)
 JOIN_TASK_GRAIN_VALUES=(1 32)
 OFFSET_TASK_GRAIN_VALUES=(1 32)
+
+# --- Unused parameters for the OMP loop version ---
+PARTITION_SCHEDULE_VALUES=(auto)
+JOIN_SCHEDULE_VALUES=(auto)
+PARTITION_CHUNK_VALUES=(0)
+JOIN_CHUNK_VALUES=(0)
