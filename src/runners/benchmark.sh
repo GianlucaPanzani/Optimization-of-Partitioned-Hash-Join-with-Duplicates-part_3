@@ -245,7 +245,7 @@ done
 
 echo
 
-make checker
+make -B checker
 ./checker
 
 make clean

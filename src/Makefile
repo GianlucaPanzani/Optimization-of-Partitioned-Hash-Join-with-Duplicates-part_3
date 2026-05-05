@@ -21,7 +21,7 @@ LIB_SOURCES    			= lib/timing.cpp lib/results.cpp
 LOG_FILES				= out/*.log err/*.log
 
 
-.PHONY: all clean cleanlogs cleanallseq cleanallpar cleanall
+.PHONY: all checker clean cleanlogs cleanallseq cleanallpar cleanall
 
 all: $(TARGETS)
 
