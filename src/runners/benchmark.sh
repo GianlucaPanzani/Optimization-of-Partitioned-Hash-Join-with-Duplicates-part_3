@@ -111,8 +111,20 @@ case "$EXECUTABLE_TARGET" in
     hashjoin_omp_loop)
         make cleanall_omp_loop
         ;;
+    hashjoin_omp_loop_opt)
+        make cleanall_omp_loop_opt
+        ;;
+    hashjoin_omp_loop_opt_wb)
+        make cleanall_omp_loop_opt_wb
+        ;;
     hashjoin_omp_task)
         make cleanall_omp_task
+        ;;
+    hashjoin_omp_task_opt)
+        make cleanall_omp_task_opt
+        ;;
+    hashjoin_omp_task_opt_wb)
+        make cleanall_omp_task_opt_wb
         ;;
     *)
         echo "Unknown executable target: $EXECUTABLE_TARGET"
