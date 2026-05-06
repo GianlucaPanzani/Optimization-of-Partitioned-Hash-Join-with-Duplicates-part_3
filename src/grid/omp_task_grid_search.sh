@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Static parameters
-N_VALUES=(50000000) # --> da modificare con 50 mln
+N_VALUES=(50000000)
 P_VALUES=(256)
 SEED_VALUES=(13)
 MAX_KEY_VALUES=(1000000)
@@ -28,7 +28,7 @@ PARTITION_BLOCK_SIZE_VALUES=(16384 32768)
 # Taskloop grains (partition_task_grain measured in input blocks, join/offset grains measured in partitions)
 PARTITION_TASK_GRAIN_VALUES=(2 4)
 JOIN_TASK_GRAIN_VALUES=(4 8)
-OFFSET_TASK_GRAIN_VALUES=(2 4 8)
+OFFSET_TASK_GRAIN_VALUES=(2 4)
 
 # --- Unused parameters for the OMP loop version ---
 PARTITION_SCHEDULE_VALUES=(auto)

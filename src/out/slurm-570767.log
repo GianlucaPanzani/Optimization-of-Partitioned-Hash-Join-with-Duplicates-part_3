@@ -1,0 +1,5 @@
+executable=hashjoin_omp_loop
+dataset-type=skewed_80_5
+join_count=32408044470
+checksum1=18086834574967794530
+checksum2=10446284450712373246

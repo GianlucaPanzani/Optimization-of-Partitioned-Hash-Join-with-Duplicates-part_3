@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Static parameters
-N_VALUES=(50000000) # --> da modificare con 50 mln
+N_VALUES=(50000000)
 P_VALUES=(256)
 SEED_VALUES=(13)
 MAX_KEY_VALUES=(1000000)
@@ -13,8 +13,8 @@ DATASET_TYPE_VALUES=(uniform skewed_80_5 skewed_90_10)
 PARTITION_THREAD_VALUES=(16 32 64)
 JOIN_THREAD_VALUES=(16 32 64)
 # Supported by hashjoin_omp_loop.cpp: static | dynamic | guided | auto
-PARTITION_SCHEDULE_VALUES=(static guided)
-JOIN_SCHEDULE_VALUES=(static guided)
+PARTITION_SCHEDULE_VALUES=(static dynamic guided)
+JOIN_SCHEDULE_VALUES=(static dynamic guided)
 # Use 0 to mean "no explicit chunk" (e.g. schedule(static) instead of schedule(static,chunk))
 PARTITION_CHUNK_VALUES=(0 32)
 JOIN_CHUNK_VALUES=(0 32)
