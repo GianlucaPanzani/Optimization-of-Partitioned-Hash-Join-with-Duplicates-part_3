@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Static parameters
-N_VALUES=(10000000) # --> da modificare con 50 mln
+N_VALUES=(50000000) # --> da modificare con 50 mln
 P_VALUES=(256)
 SEED_VALUES=(13)
 MAX_KEY_VALUES=(1000000)
