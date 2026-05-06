@@ -86,7 +86,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 #include <vector>
 
 #include <omp.h>
@@ -575,6 +574,60 @@ struct JoinResult {
     double join_time_sec = 0.0; // reserved for timing the join phase
 };
 
+
+// ------------------------------------------------------------
+// Count table
+// ------------------------------------------------------------
+class FlatCountTable {
+public:
+    explicit FlatCountTable(std::size_t expected_items) {
+        const std::size_t min_capacity = expected_items * 2;
+        std::size_t x = std::max<std::size_t>(8, min_capacity);
+        std::size_t v = 1;
+        while (v < x) {
+            v <<= 1;
+        }
+        capacity_ = v;
+        mask_ = capacity_ - 1;
+        keys_.assign(capacity_, 0);
+        counts_.assign(capacity_, 0);
+        occupied_.assign(capacity_, 0);
+    }
+
+    void increment(std::uint64_t key) {
+        std::size_t idx = static_cast<std::size_t>(splitmix64_mix(key)) & mask_;
+        while (occupied_[idx] != 0) {
+            if (keys_[idx] == key) {
+                ++counts_[idx];
+                return;
+            }
+            idx = (idx + 1) & mask_;
+        }
+
+        occupied_[idx] = 1;
+        keys_[idx] = key;
+        counts_[idx] = 1;
+    }
+
+    std::uint32_t find_count(std::uint64_t key) const {
+        std::size_t idx = static_cast<std::size_t>(splitmix64_mix(key)) & mask_;
+        while (occupied_[idx] != 0) {
+            if (keys_[idx] == key) {
+                return counts_[idx];
+            }
+            idx = (idx + 1) & mask_;
+        }
+        return 0;
+    }
+
+private:
+    std::size_t capacity_ = 0;
+    std::size_t mask_ = 0;
+    std::vector<std::uint64_t> keys_;
+    std::vector<std::uint32_t> counts_;
+    std::vector<std::uint8_t> occupied_;
+};
+
 // ------------------------------------------------------------
 // Local join on one partition
 // ------------------------------------------------------------
@@ -608,30 +661,20 @@ static JoinResult join_one_partition(const PartitionedRelation& Rpart,
         return result;
     }
 
-    // Build phase:
-    // count how many times each key appears in R_p.
-	//
-	// NOTE: Adopting std::unordered_map is an implementation choice
-	// of the reference code, not a mandatory part of the algorithm itself.
-	// Students may discuss its impact on performance and, if properly justified,
-	// replace it with alternative structures in their analysis or optimized versions,
-	// provided that the overall join logic remains unchanged
-	//
-    std::unordered_map<std::uint64_t, std::uint32_t> countR;
-    countR.max_load_factor(0.70f);
-    countR.reserve(r_end - r_begin);
+    // Build phase with a flat open-addressing table.
+    // This reduces pointer chasing versus std::unordered_map.
+    FlatCountTable countR(r_end - r_begin);
 
     for (std::size_t i = r_begin; i < r_end; ++i) {
-        ++countR[Rpart.data[i].key];
+        countR.increment(Rpart.data[i].key);
     }
 
     // Probe phase:
     // for each key in S_p, if it exists in countR, add countR[key] matches.
     for (std::size_t i = s_begin; i < s_end; ++i) {
         const std::uint64_t key = Spart.data[i].key;
-        const auto it = countR.find(key);
-        if (it != countR.end()) {
-            const std::uint64_t multiplicity = it->second;
+        const std::uint32_t multiplicity = countR.find_count(key);
+        if (multiplicity != 0U) {
 
             result.join_count += multiplicity;
 			result.checksum1 += splitmix64(key) * multiplicity;
