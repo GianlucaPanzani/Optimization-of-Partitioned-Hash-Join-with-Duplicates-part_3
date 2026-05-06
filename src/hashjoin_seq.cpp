@@ -635,6 +635,7 @@ int main(int argc, char** argv) {
     const double tot_time_sec = t1 - t0;
     
     // Resulted output
+    std::cout << "executable=" << std::filesystem::path(argv[0]).stem().string() << "\n";
     std::cout << "dataset-type=" << dataset_cfg.type << "\n";
     std::cout << "join_count=" << result.join_count << "\n";
     std::cout << "checksum1=" << result.checksum1 << "\n";

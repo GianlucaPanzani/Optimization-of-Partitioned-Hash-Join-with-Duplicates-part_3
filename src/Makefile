@@ -10,6 +10,7 @@ TARGETS					= hashjoin_* weak_scaling
 GCC_SEQ_REPORT  		= compilation/gcc_seq_report.txt
 GCC_OMP_LOOP_REPORT		= compilation/gcc_omp_loop_report.txt
 GCC_OMP_TASK_REPORT		= compilation/gcc_omp_task_report.txt
+GCC_CHECKER_REPORT		= compilation/gcc_checker_report.txt
 GCC_REPORTS				= compilation/gcc_*_report.txt
 
 RES_SEQ					= results/hashjoin_seq.csv
@@ -26,7 +27,7 @@ LOG_FILES				= out/*.log err/*.log
 all: $(TARGETS)
 
 checker: checker.cpp
-	$(CXX) $(CXXFLAGS) -o $@ checker.cpp
+	$(CXX) $(CXXFLAGS) -o $@ checker.cpp 2> $(GCC_CHECKER_REPORT)
 
 hashjoin_seq: hashjoin_seq.cpp $(LIB_SOURCES)
 	$(CXX) $(CXXFLAGS) $(AUTOFLAGS) -o $@ hashjoin_seq.cpp $(LIB_SOURCES) 2> $(GCC_SEQ_REPORT)

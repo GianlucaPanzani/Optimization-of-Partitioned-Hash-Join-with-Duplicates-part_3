@@ -21,7 +21,16 @@ static bool read_file_binary(const fs::path& path, std::string& out) {
     return true;
 }
 
-static std::optional<std::string> dataset_type_from_content(const std::string& content) {
+struct ResultOutput {
+    std::string executable;
+    std::string dataset_type;
+    std::string join_count;
+    std::string checksum1;
+    std::string checksum2;
+};
+
+static std::map<std::string, std::string> parse_key_values(const std::string& content) {
+    std::map<std::string, std::string> values;
     std::istringstream in(content);
     std::string line;
 
@@ -35,19 +44,46 @@ static std::optional<std::string> dataset_type_from_content(const std::string& c
             continue;
         }
 
-        const std::string key = line.substr(0, separator);
-        if (key == "dataset-type" || key == "dataset_type") {
-            return line.substr(separator + 1);
-        }
+        values[line.substr(0, separator)] = line.substr(separator + 1);
     }
 
-    return std::nullopt;
+    return values;
+}
+
+static std::optional<ResultOutput> result_from_content(const std::string& content) {
+    const auto values = parse_key_values(content);
+
+    const auto executable = values.find("executable");
+    const auto dataset_type_dash = values.find("dataset-type");
+    const auto dataset_type_underscore = values.find("dataset_type");
+    const auto join_count = values.find("join_count");
+    const auto checksum1 = values.find("checksum1");
+    const auto checksum2 = values.find("checksum2");
+
+    const bool has_dataset_type = dataset_type_dash != values.end() || dataset_type_underscore != values.end();
+    if (executable == values.end() || !has_dataset_type ||
+        join_count == values.end() || checksum1 == values.end() || checksum2 == values.end()) {
+        return std::nullopt;
+    }
+
+    return ResultOutput{
+        executable->second,
+        (dataset_type_dash != values.end()) ? dataset_type_dash->second : dataset_type_underscore->second,
+        join_count->second,
+        checksum1->second,
+        checksum2->second,
+    };
 }
 
 struct OutputFile {
     fs::path path;
-    std::string content;
+    ResultOutput result;
 };
+
+static bool is_slurm_output_file(const fs::path& path) {
+    const std::string filename = path.filename().string();
+    return filename.rfind("slurm", 0) == 0;
+}
 
 
 
@@ -67,12 +103,12 @@ int main(int argc, char** argv) {
     // Get the files inside the directory
     std::vector<fs::path> files;
     for (const auto& entry : fs::directory_iterator(out_dir)) {
-        if (entry.is_regular_file()) {
+        if (entry.is_regular_file() && is_slurm_output_file(entry.path())) {
             files.push_back(entry.path());
         }
     }
     if (files.empty()) {
-        std::cerr << "[checker] no files found in: " << out_dir << '\n';
+        std::cerr << "[checker] no slurm output files found in: " << out_dir << '\n';
         return 2;
     }
 
@@ -86,44 +122,54 @@ int main(int argc, char** argv) {
             return 2;
         }
 
-        const auto dataset_type = dataset_type_from_content(content);
-        if (!dataset_type.has_value() || dataset_type->empty()) {
-            std::cerr << "[checker] missing dataset-type in: " << file.filename().string() << '\n';
+        const auto result = result_from_content(content);
+        if (!result.has_value() || result->executable.empty() || result->dataset_type.empty()) {
+            std::cerr << "[checker] missing executable/dataset-type/checksum output in: " << file.filename().string() << '\n';
             return 2;
         }
 
-        files_by_dataset_type[*dataset_type].push_back(OutputFile{file, std::move(content)});
+        const std::string group_key = result->executable + " | " + result->dataset_type;
+        files_by_dataset_type[group_key].push_back(OutputFile{file, *result});
     }
 
     bool all_equal = true;
 
-    for (const auto& [dataset_type, dataset_files] : files_by_dataset_type) {
+    for (const auto& [group_key, dataset_files] : files_by_dataset_type) {
         const auto& reference = dataset_files.front();
         bool dataset_equal = true;
 
         for (std::size_t i = 1; i < dataset_files.size(); ++i) {
             const auto& current = dataset_files[i];
-            if (current.content != reference.content) {
+            if (current.result.join_count != reference.result.join_count ||
+                current.result.checksum1 != reference.result.checksum1 ||
+                current.result.checksum2 != reference.result.checksum2) {
                 dataset_equal = false;
                 all_equal = false;
-                std::cerr << "[checker] mismatch: dataset-type=" << dataset_type << ' '
+                std::cout << "[checker] mismatch: executable=" << current.result.executable
+                          << " dataset-type=" << current.result.dataset_type << ' '
                           << current.path.filename().string() << " differs from "
-                          << reference.path.filename().string() << '\n';
+                          << reference.path.filename().string()
+                          << " reference=(" << reference.result.join_count << ", "
+                          << reference.result.checksum1 << ", " << reference.result.checksum2 << ")"
+                          << " current=(" << current.result.join_count << ", "
+                          << current.result.checksum1 << ", " << current.result.checksum2 << ")\n";
             }
         }
 
         if (!dataset_equal) {
-            std::cout << "[checker] NO --> dataset-type=" << dataset_type
-                      << " output files are NOT identical\n";
+            std::cout << "[checker] NO --> executable=" << reference.result.executable
+                      << " dataset-type=" << reference.result.dataset_type
+                      << " output files do NOT have identical checksums\n";
         } else {
-            std::cout << "[checker] OK --> dataset-type=" << dataset_type
+            std::cout << "[checker] OK --> executable=" << reference.result.executable
+                      << " dataset-type=" << reference.result.dataset_type
                       << " all " << dataset_files.size()
-                      << " output files have the same content\n";
+                      << " output files have identical checksums\n";
         }
     }
 
     if (!all_equal) {
-        std::cout << "[checker] NO --> at least one dataset-type group has non-identical output files\n";
+        std::cout << "[checker] NO --> at least one executable/dataset-type group has non-identical checksums\n";
     }
     return 0;
 }
