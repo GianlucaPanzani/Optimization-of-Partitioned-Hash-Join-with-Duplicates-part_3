@@ -118,17 +118,32 @@ static bool read_arg_u64(int argc, char** argv,
     }
     return false;
 }
+static bool read_arg_string(int argc, char** argv,
+                            std::initializer_list<std::string_view> names,
+                            std::string& out) {
+    for (int i = 1; i + 1 < argc; ++i) {
+        const std::string_view arg(argv[i]);
+        for (const auto name : names) {
+            if (arg == name) {
+                out = argv[i + 1];
+                return true;
+            }
+        }
+    }
+    return false;
+}
 static void usage(const char* prog) {
     std::cerr
         << "Usage:\n"
         << "  " << prog
-        << " -nr NR -ns NS -seed SEED -max-key K -p P [--partition-threads T] [--join-threads T]\n\n"
+        << " -nr NR -ns NS -seed SEED -max-key K -p P [--dataset-type TYPE] [--partition-threads T] [--join-threads T]\n\n"
         << "Parameters:\n"
         << "  -nr         Number of records in relation R\n"
         << "  -ns         Number of records in relation S\n"
         << "  -seed       Deterministic seed\n"
         << "  -max-key    Keys are generated in [0, max-key)\n"
         << "  -p          Number of partitions (power of two required in this reference code)\n"
+        << "  --dataset-type / -dataset-type             Dataset type label written to output\n"
         << "  --partition-threads / -partition-threads   Number of threads for partition phase (reserved)\n"
         << "  --join-threads / -join-threads             Number of threads for join phase (reserved)\n";
 }
@@ -498,6 +513,7 @@ static JoinResult naive_join_verifier(const std::vector<Record>& R,
 int main(int argc, char** argv) {
     std::uint64_t nr = 0, ns = 0, seed = 0, max_key = 0, p = 0;
     std::uint64_t part_threads = 1, join_threads = 1;
+    std::string dataset_type_name = "uniform";
 
     if (!read_arg_u64(argc, argv, {"-nr"}, nr) ||
         !read_arg_u64(argc, argv, {"-ns"}, ns) ||
@@ -507,6 +523,7 @@ int main(int argc, char** argv) {
         usage(argv[0]);
         return 1;
     }
+    read_arg_string(argc, argv, {"--dataset-type", "-dataset-type", "--dataset", "-dataset"}, dataset_type_name);
     read_arg_u64(argc, argv, {"--partition-threads", "-partition-threads"}, part_threads);
     read_arg_u64(argc, argv, {"--join-threads", "-join-threads"}, join_threads);
 
@@ -544,6 +561,8 @@ int main(int argc, char** argv) {
     const double tot_time_sec = t1 - t0;
     
     // Resulted output
+    std::cout << "executable=" << std::filesystem::path(argv[0]).stem().string() << "\n";
+    std::cout << "dataset-type=" << dataset_type_name << "\n";
     std::cout << "join_count=" << result.join_count << "\n";
     std::cout << "checksum1=" << result.checksum1 << "\n";
     std::cout << "checksum2=" << result.checksum2 << "\n";
