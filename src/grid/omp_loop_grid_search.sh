@@ -26,13 +26,13 @@ PARTITION_BLOCK_SIZE_VALUES=(32768 131072)
 PARTITION_THREAD_VALUES=(32)
 JOIN_THREAD_VALUES=(32)
 # Supported by hashjoin_omp_loop.cpp: static | dynamic | guided | auto
-PARTITION_SCHEDULE_VALUES=(static guided)
-JOIN_SCHEDULE_VALUES=(static guided)
+PARTITION_SCHEDULE_VALUES=(guided)
+JOIN_SCHEDULE_VALUES=(guided)
 # Use 0 to mean "no explicit chunk" (e.g. schedule(static) instead of schedule(static,chunk))
 PARTITION_CHUNK_VALUES=(0 8)
 JOIN_CHUNK_VALUES=(0 8)
 # Block size used by the parallel partitioning implementation (for the block-based histogram/scatter phase)
-PARTITION_BLOCK_SIZE_VALUES=(16384 32768)
+PARTITION_BLOCK_SIZE_VALUES=(32768)
 
 
 # --- Unused parameters for the OMP loop version ---
