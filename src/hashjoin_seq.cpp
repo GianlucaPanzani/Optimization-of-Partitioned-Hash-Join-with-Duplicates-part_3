@@ -151,6 +151,43 @@ static bool is_power_of_two(std::uint32_t x) {
     return x != 0 && (x & (x - 1U)) == 0;
 }
 
+struct DatasetMetadata {
+    std::string dataset = "uniform";
+    double skew_fraction = 0.0;
+    double skew_partition_fraction = 1.0;
+};
+
+static DatasetMetadata dataset_metadata_from_type(const std::string& dataset_type) {
+    DatasetMetadata metadata;
+    if (dataset_type == "uniform") {
+        return metadata;
+    }
+
+    const std::string prefix = "skewed_";
+    if (dataset_type.rfind(prefix, 0) != 0) {
+        metadata.dataset = dataset_type;
+        return metadata;
+    }
+
+    const std::string rest = dataset_type.substr(prefix.size());
+    const std::size_t separator = rest.find('_');
+    if (separator == std::string::npos) {
+        metadata.dataset = "skewed";
+        return metadata;
+    }
+
+    try {
+        metadata.dataset = "skewed";
+        metadata.skew_fraction = static_cast<double>(std::stoul(rest.substr(0, separator))) / 100.0;
+        metadata.skew_partition_fraction = static_cast<double>(std::stoul(rest.substr(separator + 1))) / 100.0;
+    } catch (const std::exception&) {
+        metadata.dataset = "skewed";
+        metadata.skew_fraction = 0.0;
+        metadata.skew_partition_fraction = 1.0;
+    }
+    return metadata;
+}
+
 
 // ------------------------------------------------------------
 // Deterministic pseudo-random generation
@@ -513,7 +550,10 @@ static JoinResult naive_join_verifier(const std::vector<Record>& R,
 int main(int argc, char** argv) {
     std::uint64_t nr = 0, ns = 0, seed = 0, max_key = 0, p = 0;
     std::uint64_t part_threads = 1, join_threads = 1;
+    std::uint64_t partition_chunk = 0, join_chunk = 0, partition_block_size = 32768;
+    std::uint64_t partition_task_grain = 1, join_task_grain = 1, offset_task_grain = 1;
     std::string dataset_type_name = "uniform";
+    std::string partition_schedule = "static", join_schedule = "static";
 
     if (!read_arg_u64(argc, argv, {"-nr"}, nr) ||
         !read_arg_u64(argc, argv, {"-ns"}, ns) ||
@@ -526,6 +566,14 @@ int main(int argc, char** argv) {
     read_arg_string(argc, argv, {"--dataset-type", "-dataset-type", "--dataset", "-dataset"}, dataset_type_name);
     read_arg_u64(argc, argv, {"--partition-threads", "-partition-threads"}, part_threads);
     read_arg_u64(argc, argv, {"--join-threads", "-join-threads"}, join_threads);
+    read_arg_string(argc, argv, {"--partition-schedule", "-partition-schedule"}, partition_schedule);
+    read_arg_string(argc, argv, {"--join-schedule", "-join-schedule"}, join_schedule);
+    read_arg_u64(argc, argv, {"--partition-chunk", "-partition-chunk"}, partition_chunk);
+    read_arg_u64(argc, argv, {"--join-chunk", "-join-chunk"}, join_chunk);
+    read_arg_u64(argc, argv, {"--partition-block-size", "-partition-block-size"}, partition_block_size);
+    read_arg_u64(argc, argv, {"--partition-task-grain", "-partition-task-grain"}, partition_task_grain);
+    read_arg_u64(argc, argv, {"--join-task-grain", "-join-task-grain"}, join_task_grain);
+    read_arg_u64(argc, argv, {"--offset-task-grain", "-offset-task-grain"}, offset_task_grain);
 
     if (p > std::numeric_limits<std::uint32_t>::max()) {
         std::cerr << "Error: P too large.\n";
@@ -580,21 +628,34 @@ int main(int argc, char** argv) {
     const double part_throughput = compute_throughput(total_elements, result.part_time_sec);
     const double join_throughput = compute_throughput(total_elements, result.join_time_sec);
     const double total_throughput = compute_throughput(total_elements, tot_time_sec);
+    const DatasetMetadata dataset_metadata = dataset_metadata_from_type(dataset_type_name);
     const ResultMap results_map = {
         {"checksum1", std::to_string(result.checksum1)},
         {"checksum2", std::to_string(result.checksum2)},
+        {"dataset", dataset_metadata.dataset},
+        {"dataset_type", dataset_type_name},
+        {"join_chunk", std::to_string(join_chunk)},
         {"join_count", std::to_string(result.join_count)},
-        {"join_throughput", std::to_string(join_throughput)},
-        {"total_throughput", std::to_string(total_throughput)},
-        {"partition_time", std::to_string(result.part_time_sec)},
-        {"partition_throughput", std::to_string(part_throughput)},
-        {"join_time", std::to_string(result.join_time_sec)},
-        {"partition_threads", std::to_string(part_threads)},
+        {"join_schedule", join_schedule},
+        {"join_task_grain", std::to_string(join_task_grain)},
         {"join_threads", std::to_string(join_threads)},
+        {"join_throughput", std::to_string(join_throughput)},
+        {"join_time", std::to_string(result.join_time_sec)},
         {"max_key", std::to_string(max_key)},
         {"nr", std::to_string(NR)},
         {"ns", std::to_string(NS)},
-        {"time_sec", std::to_string(tot_time_sec)}
+        {"offset_task_grain", std::to_string(offset_task_grain)},
+        {"partition_block_size", std::to_string(partition_block_size)},
+        {"partition_chunk", std::to_string(partition_chunk)},
+        {"partition_schedule", partition_schedule},
+        {"partition_task_grain", std::to_string(partition_task_grain)},
+        {"partition_threads", std::to_string(part_threads)},
+        {"partition_throughput", std::to_string(part_throughput)},
+        {"partition_time", std::to_string(result.part_time_sec)},
+        {"skew_fraction", std::to_string(dataset_metadata.skew_fraction)},
+        {"skew_partition_fraction", std::to_string(dataset_metadata.skew_partition_fraction)},
+        {"time_sec", std::to_string(tot_time_sec)},
+        {"total_throughput", std::to_string(total_throughput)},
     };
     const std::string filepath = "results/" + std::filesystem::path(argv[0]).stem().string() + ".csv";
     append_to_csv(filepath, results_map);
