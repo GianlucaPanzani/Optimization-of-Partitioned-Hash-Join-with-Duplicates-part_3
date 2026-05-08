@@ -5,7 +5,7 @@
 //
 // This file is intentionally kept close to hashjoin_seq.cpp, with only the
 // modifications needed to express the partitioning and local-join phases with
-// OpenMP tasks/taskloop constructs.
+// explicit OpenMP tasks.
 //
 // Run example:
 //   ./hashjoin_omp_task -nr 5 -ns 8 -seed 13 -max-key 8 -p 4
@@ -83,7 +83,7 @@ static void usage(const char* prog) {
         << " -nr NR -ns NS -seed SEED -max-key K -p P\n"
         << "       [--partition-threads T] [--join-threads T]\n"
         << "       [--partition-block-size B]\n"
-        << "       [--partition-task-grain G] [--join-task-grain G] [--offset-task-grain G]\n"
+        << "       [--partition-task-blocks B] [--join-task-partitions P] [--offset-task-partitions P]\n"
         << "       [--partition-chunk C] [--join-chunk C]\n\n"
         << "Parameters:\n"
         << "  -nr         Number of records in relation R\n"
@@ -94,12 +94,12 @@ static void usage(const char* prog) {
         << "  --partition-threads      Number of threads for task-based partition phase\n"
         << "  --join-threads           Number of threads for task-based join phase\n"
         << "  --partition-block-size   Number of records per input block during partitioning\n"
-        << "  --partition-task-grain   taskloop grainsize, in input blocks, for histogram/scatter\n"
-        << "  --join-task-grain        taskloop grainsize, in partitions, for local joins\n"
-        << "  --offset-task-grain      taskloop grainsize, in partitions, for offset/prefix-related loops\n"
+        << "  --partition-task-blocks  Number of input blocks handled by each explicit partition task\n"
+        << "  --join-task-partitions   Number of partitions handled by each explicit join task\n"
+        << "  --offset-task-partitions Number of partitions handled by each explicit offset task\n"
         << "  --partition-chunk / --join-chunk are accepted for compatibility with the loop benchmark scripts.\n"
         << "  --dataset-type uniform|skewed_<record_pct>_<hot_partition_pct>\n"
-        << "    If explicit task grains are not provided, non-zero chunk values are used as task grains.\n";
+        << "  --partition-task-grain / --join-task-grain / --offset-task-grain are accepted as legacy aliases.\n";
 }
 
 static bool is_power_of_two(std::uint32_t x) {
@@ -114,17 +114,17 @@ struct OmpTaskConfig {
     int join_threads = 1;
     std::size_t partition_block_size = 65536;
 
-    // taskloop grainsize values.
-    // partition_task_grain is measured in input blocks.
-    // join_task_grain and offset_task_grain are measured in partitions.
-    int partition_task_grain = 1;
-    int join_task_grain = 1;
-    int offset_task_grain = 1;
+    // Explicit task batch sizes.
+    // partition_task_blocks is measured in input blocks.
+    // join_task_partitions and offset_task_partitions are measured in partitions.
+    int partition_task_blocks = 1;
+    int join_task_partitions = 1;
+    int offset_task_partitions = 1;
 
     // Kept only for compatibility with the same runner/grid format used by
     // hashjoin_omp_loop.cpp. They do not control task scheduling.
-    std::string partition_schedule_name = "taskloop";
-    std::string join_schedule_name = "taskloop";
+    std::string partition_schedule_name = "explicit-task";
+    std::string join_schedule_name = "explicit-task";
     std::string dataset_type_name = "uniform";
     int partition_chunk = 0;
     int join_chunk = 0;
@@ -142,19 +142,6 @@ static int checked_nonnegative_int(std::uint64_t value, const char* name) {
         throw std::runtime_error(std::string("Invalid ") + name + ": too large");
     }
     return static_cast<int>(value);
-}
-
-static int grain_from_optional(std::uint64_t explicit_grain,
-                               bool has_explicit_grain,
-                               std::uint64_t fallback_chunk,
-                               const char* name) {
-    if (has_explicit_grain) {
-        return checked_positive_int(explicit_grain, name);
-    }
-    if (fallback_chunk != 0) {
-        return checked_positive_int(fallback_chunk, name);
-    }
-    return 1;
 }
 
 // ------------------------------------------------------------
@@ -302,6 +289,10 @@ struct HistogramResult {
     std::size_t num_blocks = 0;
 };
 
+static inline std::size_t task_batch_size(int configured_value) {
+    return static_cast<std::size_t>(configured_value);
+}
+
 static HistogramResult compute_histogram(const std::vector<Record>& data,
                                          std::uint32_t P,
                                          const OmpTaskConfig& cfg) {
@@ -309,40 +300,54 @@ static HistogramResult compute_histogram(const std::vector<Record>& data,
     const std::size_t block_size = cfg.partition_block_size;
     const std::size_t num_blocks = (n + block_size - 1) / block_size;
     const std::size_t P_size = static_cast<std::size_t>(P);
-    const int partition_grain = cfg.partition_task_grain;
-    const int offset_grain = cfg.offset_task_grain;
+    const std::size_t partition_task_blocks = task_batch_size(cfg.partition_task_blocks);
+    const std::size_t offset_task_partitions = task_batch_size(cfg.offset_task_partitions);
 
     HistogramResult out;
     out.hist.assign(P_size, 0);
     out.block_hist.assign(num_blocks * P_size, 0);
     out.num_blocks = num_blocks;
 
-    #pragma omp parallel num_threads(cfg.partition_threads) default(none) shared(data, out) firstprivate(P, P_size, block_size, num_blocks, partition_grain, offset_grain)
+    #pragma omp parallel num_threads(cfg.partition_threads) default(none) shared(data, out) firstprivate(P, P_size, block_size, num_blocks, partition_task_blocks, offset_task_partitions)
     {
         #pragma omp single
         {
-            #pragma omp taskloop grainsize(partition_grain) if(num_blocks > static_cast<std::size_t>(partition_grain))
-            for (std::int64_t b_signed = 0; b_signed < static_cast<std::int64_t>(num_blocks); ++b_signed) {
-                const std::size_t b = static_cast<std::size_t>(b_signed);
-                const std::size_t begin = b * block_size;
-                const std::size_t end = std::min(begin + block_size, data.size());
-                std::size_t* local = out.block_hist.data() + b * P_size;
+            for (std::size_t task_begin = 0; task_begin < num_blocks; task_begin += partition_task_blocks) {
+                const std::size_t task_end = std::min(task_begin + partition_task_blocks, num_blocks);
 
-                for (std::size_t i = begin; i < end; ++i) {
-                    const std::uint32_t pid = compute_partition_id(data[i].key, P);
-                    ++local[pid];
+                #pragma omp task default(none) shared(data, out) firstprivate(P, P_size, block_size, task_begin, task_end)
+                {
+                    for (std::size_t b = task_begin; b < task_end; ++b) {
+                        const std::size_t begin = b * block_size;
+                        const std::size_t end = std::min(begin + block_size, data.size());
+                        std::size_t* local = out.block_hist.data() + b * P_size;
+
+                        for (std::size_t i = begin; i < end; ++i) {
+                            const std::uint32_t pid = compute_partition_id(data[i].key, P);
+                            ++local[pid];
+                        }
+                    }
                 }
             }
 
-            #pragma omp taskloop grainsize(offset_grain) if(P_size > static_cast<std::size_t>(offset_grain))
-            for (std::int64_t pid_signed = 0; pid_signed < static_cast<std::int64_t>(P); ++pid_signed) {
-                const std::size_t pid = static_cast<std::size_t>(pid_signed);
-                std::size_t sum = 0;
-                for (std::size_t b = 0; b < num_blocks; ++b) {
-                    sum += out.block_hist[b * P_size + pid];
+            #pragma omp taskwait
+
+            for (std::size_t task_begin = 0; task_begin < P_size; task_begin += offset_task_partitions) {
+                const std::size_t task_end = std::min(task_begin + offset_task_partitions, P_size);
+
+                #pragma omp task default(none) shared(out) firstprivate(P_size, num_blocks, task_begin, task_end)
+                {
+                    for (std::size_t pid = task_begin; pid < task_end; ++pid) {
+                        std::size_t sum = 0;
+                        for (std::size_t b = 0; b < num_blocks; ++b) {
+                            sum += out.block_hist[b * P_size + pid];
+                        }
+                        out.hist[pid] = sum;
+                    }
                 }
-                out.hist[pid] = sum;
             }
+
+            #pragma omp taskwait
         }
     }
 
@@ -376,41 +381,55 @@ static std::vector<Record> scatter_partitioned(const std::vector<Record>& data,
     const std::size_t num_blocks = hist_result.num_blocks;
     const std::size_t block_size = cfg.partition_block_size;
     const std::size_t P_size = static_cast<std::size_t>(P);
-    const int partition_grain = cfg.partition_task_grain;
-    const int offset_grain = cfg.offset_task_grain;
+    const std::size_t partition_task_blocks = task_batch_size(cfg.partition_task_blocks);
+    const std::size_t offset_task_partitions = task_batch_size(cfg.offset_task_partitions);
 
     std::vector<std::size_t> block_offsets(num_blocks * P_size, 0);
 
-    #pragma omp parallel num_threads(cfg.partition_threads) default(none) shared(data, out, block_offsets, hist_result, begin) firstprivate(P, P_size, block_size, num_blocks, partition_grain, offset_grain)
+    #pragma omp parallel num_threads(cfg.partition_threads) default(none) shared(data, out, block_offsets, hist_result, begin) firstprivate(P, P_size, block_size, num_blocks, partition_task_blocks, offset_task_partitions)
     {
         #pragma omp single
         {
-            #pragma omp taskloop grainsize(offset_grain) if(P_size > static_cast<std::size_t>(offset_grain))
-            for (std::int64_t pid_signed = 0; pid_signed < static_cast<std::int64_t>(P); ++pid_signed) {
-                const std::size_t pid = static_cast<std::size_t>(pid_signed);
-                std::size_t running = begin[pid];
-                for (std::size_t b = 0; b < num_blocks; ++b) {
-                    block_offsets[b * P_size + pid] = running;
-                    running += hist_result.block_hist[b * P_size + pid];
+            for (std::size_t task_begin = 0; task_begin < P_size; task_begin += offset_task_partitions) {
+                const std::size_t task_end = std::min(task_begin + offset_task_partitions, P_size);
+
+                #pragma omp task default(none) shared(block_offsets, hist_result, begin) firstprivate(P_size, num_blocks, task_begin, task_end)
+                {
+                    for (std::size_t pid = task_begin; pid < task_end; ++pid) {
+                        std::size_t running = begin[pid];
+                        for (std::size_t b = 0; b < num_blocks; ++b) {
+                            block_offsets[b * P_size + pid] = running;
+                            running += hist_result.block_hist[b * P_size + pid];
+                        }
+                    }
                 }
             }
 
-            #pragma omp taskloop grainsize(partition_grain) if(num_blocks > static_cast<std::size_t>(partition_grain))
-            for (std::int64_t b_signed = 0; b_signed < static_cast<std::int64_t>(num_blocks); ++b_signed) {
-                const std::size_t b = static_cast<std::size_t>(b_signed);
-                const std::size_t in_begin = b * block_size;
-                const std::size_t in_end = std::min(in_begin + block_size, data.size());
+            #pragma omp taskwait
 
-                std::vector<std::size_t> next(P_size);
-                for (std::size_t pid = 0; pid < P_size; ++pid) {
-                    next[pid] = block_offsets[b * P_size + pid];
-                }
+            for (std::size_t task_begin = 0; task_begin < num_blocks; task_begin += partition_task_blocks) {
+                const std::size_t task_end = std::min(task_begin + partition_task_blocks, num_blocks);
 
-                for (std::size_t i = in_begin; i < in_end; ++i) {
-                    const std::uint32_t pid = compute_partition_id(data[i].key, P);
-                    out[next[pid]++] = data[i];
+                #pragma omp task default(none) shared(data, out, block_offsets) firstprivate(P, P_size, block_size, task_begin, task_end)
+                {
+                    for (std::size_t b = task_begin; b < task_end; ++b) {
+                        const std::size_t in_begin = b * block_size;
+                        const std::size_t in_end = std::min(in_begin + block_size, data.size());
+
+                        std::vector<std::size_t> next(P_size);
+                        for (std::size_t pid = 0; pid < P_size; ++pid) {
+                            next[pid] = block_offsets[b * P_size + pid];
+                        }
+
+                        for (std::size_t i = in_begin; i < in_end; ++i) {
+                            const std::uint32_t pid = compute_partition_id(data[i].key, P);
+                            out[next[pid]++] = data[i];
+                        }
+                    }
                 }
             }
+
+            #pragma omp taskwait
         }
     }
 
@@ -571,17 +590,26 @@ static JoinResult partitioned_hash_join(const std::vector<Record>& R,
 
     t0 = get_time();
     std::vector<JoinResult> partial(static_cast<std::size_t>(p));
-    const int join_grain = cfg.join_task_grain;
+    const std::size_t P_size = static_cast<std::size_t>(p);
+    const std::size_t join_task_partitions = task_batch_size(cfg.join_task_partitions);
 
-    #pragma omp parallel num_threads(cfg.join_threads) default(none) shared(partial, Rpart, Spart) firstprivate(p, join_grain)
+    #pragma omp parallel num_threads(cfg.join_threads) default(none) shared(partial, Rpart, Spart) firstprivate(P_size, join_task_partitions)
     {
-        #pragma omp single nowait
+        #pragma omp single
         {
-            #pragma omp taskloop grainsize(join_grain) if(static_cast<std::size_t>(p) > static_cast<std::size_t>(join_grain))
-            for (std::int64_t pid_signed = 0; pid_signed < static_cast<std::int64_t>(p); ++pid_signed) {
-                const std::uint32_t pid = static_cast<std::uint32_t>(pid_signed);
-                partial[pid] = join_one_partition(Rpart, Spart, pid);
+            for (std::size_t task_begin = 0; task_begin < P_size; task_begin += join_task_partitions) {
+                const std::size_t task_end = std::min(task_begin + join_task_partitions, P_size);
+
+                #pragma omp task default(none) shared(partial, Rpart, Spart) firstprivate(task_begin, task_end)
+                {
+                    for (std::size_t pid_index = task_begin; pid_index < task_end; ++pid_index) {
+                        const std::uint32_t pid = static_cast<std::uint32_t>(pid_index);
+                        partial[pid_index] = join_one_partition(Rpart, Spart, pid);
+                    }
+                }
             }
+
+            #pragma omp taskwait
         }
     }
 
@@ -626,12 +654,15 @@ int main(int argc, char** argv) {
 
     std::uint64_t partition_chunk_u64 = 0;
     std::uint64_t join_chunk_u64 = 0;
-    std::uint64_t partition_task_grain_u64 = 1;
-    std::uint64_t join_task_grain_u64 = 1;
-    std::uint64_t offset_task_grain_u64 = 1;
+    std::uint64_t partition_task_blocks_u64 = 1;
+    std::uint64_t join_task_partitions_u64 = 1;
+    std::uint64_t offset_task_partitions_u64 = 1;
+    std::uint64_t partition_task_grain_u64 = 0; // legacy alias
+    std::uint64_t join_task_grain_u64 = 0;      // legacy alias
+    std::uint64_t offset_task_grain_u64 = 0;    // legacy alias
 
-    std::string partition_schedule_name = "taskloop";
-    std::string join_schedule_name = "taskloop";
+    std::string partition_schedule_name = "explicit-task";
+    std::string join_schedule_name = "explicit-task";
     std::string dataset_type_name = "uniform";
 
     if (!read_arg_u64(argc, argv, {"-nr"}, nr) ||
@@ -654,12 +685,28 @@ int main(int argc, char** argv) {
     read_arg_string(argc, argv, {"--join-schedule", "-join-schedule"}, join_schedule_name);
     read_arg_string(argc, argv, {"--dataset-type", "-dataset-type", "--dataset", "-dataset"}, dataset_type_name);
 
-    // Task-specific parameters. If not provided, non-zero chunk values are used
-    // as the corresponding taskloop grainsize, so the existing bash grid can be
-    // reused with minimal changes.
+    // Task-specific parameters. Legacy task-grain arguments are accepted so the
+    // existing bash grid can be reused without changing the runner.
+    const bool has_partition_task_blocks = read_arg_u64(argc, argv, {"--partition-task-blocks", "-partition-task-blocks"}, partition_task_blocks_u64);
+    const bool has_join_task_partitions = read_arg_u64(argc, argv, {"--join-task-partitions", "-join-task-partitions"}, join_task_partitions_u64);
+    const bool has_offset_task_partitions = read_arg_u64(argc, argv, {"--offset-task-partitions", "-offset-task-partitions"}, offset_task_partitions_u64);
     const bool has_partition_task_grain = read_arg_u64(argc, argv, {"--partition-task-grain", "-partition-task-grain"}, partition_task_grain_u64);
     const bool has_join_task_grain = read_arg_u64(argc, argv, {"--join-task-grain", "-join-task-grain"}, join_task_grain_u64);
     const bool has_offset_task_grain = read_arg_u64(argc, argv, {"--offset-task-grain", "-offset-task-grain"}, offset_task_grain_u64);
+
+    if (!has_partition_task_blocks && has_partition_task_grain) {
+        partition_task_blocks_u64 = partition_task_grain_u64;
+    } else if (!has_partition_task_blocks && partition_chunk_u64 != 0) {
+        partition_task_blocks_u64 = partition_chunk_u64;
+    }
+    if (!has_join_task_partitions && has_join_task_grain) {
+        join_task_partitions_u64 = join_task_grain_u64;
+    } else if (!has_join_task_partitions && join_chunk_u64 != 0) {
+        join_task_partitions_u64 = join_chunk_u64;
+    }
+    if (!has_offset_task_partitions && has_offset_task_grain) {
+        offset_task_partitions_u64 = offset_task_grain_u64;
+    }
 
     if (p > std::numeric_limits<std::uint32_t>::max()) {
         std::cerr << "Error: P too large.\n";
@@ -669,6 +716,18 @@ int main(int argc, char** argv) {
         std::cerr << "Error: partition block size must be greater than zero.\n";
         return 1;
     }
+    if (partition_task_blocks_u64 == 0) {
+        std::cerr << "Error: partition task block count must be greater than zero.\n";
+        return 1;
+    }
+    if (join_task_partitions_u64 == 0) {
+        std::cerr << "Error: join task partition count must be greater than zero.\n";
+        return 1;
+    }
+    if (offset_task_partitions_u64 == 0) {
+        std::cerr << "Error: offset task partition count must be greater than zero.\n";
+        return 1;
+    }
 
     OmpTaskConfig cfg{};
     try {
@@ -676,9 +735,9 @@ int main(int argc, char** argv) {
         cfg.join_threads = checked_positive_int(join_threads_u64, "join thread count");
         cfg.partition_chunk = checked_nonnegative_int(partition_chunk_u64, "partition chunk size");
         cfg.join_chunk = checked_nonnegative_int(join_chunk_u64, "join chunk size");
-        cfg.partition_task_grain = grain_from_optional(partition_task_grain_u64, has_partition_task_grain, partition_chunk_u64, "partition task grain");
-        cfg.join_task_grain = grain_from_optional(join_task_grain_u64, has_join_task_grain, join_chunk_u64, "join task grain");
-        cfg.offset_task_grain = grain_from_optional(offset_task_grain_u64, has_offset_task_grain, 1, "offset task grain");
+        cfg.partition_task_blocks = checked_positive_int(partition_task_blocks_u64, "partition task block count");
+        cfg.join_task_partitions = checked_positive_int(join_task_partitions_u64, "join task partition count");
+        cfg.offset_task_partitions = checked_positive_int(offset_task_partitions_u64, "offset task partition count");
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";
         return 1;
@@ -753,9 +812,12 @@ int main(int argc, char** argv) {
         {"join_schedule", cfg.join_schedule_name},
         {"partition_chunk", std::to_string(cfg.partition_chunk)},
         {"join_chunk", std::to_string(cfg.join_chunk)},
-        {"partition_task_grain", std::to_string(cfg.partition_task_grain)},
-        {"join_task_grain", std::to_string(cfg.join_task_grain)},
-        {"offset_task_grain", std::to_string(cfg.offset_task_grain)},
+        {"partition_task_blocks", std::to_string(cfg.partition_task_blocks)},
+        {"join_task_partitions", std::to_string(cfg.join_task_partitions)},
+        {"offset_task_partitions", std::to_string(cfg.offset_task_partitions)},
+        {"partition_task_grain", std::to_string(cfg.partition_task_blocks)},
+        {"join_task_grain", std::to_string(cfg.join_task_partitions)},
+        {"offset_task_grain", std::to_string(cfg.offset_task_partitions)},
         {"partition_block_size", std::to_string(cfg.partition_block_size)},
         {"max_key", std::to_string(max_key)},
         {"nr", std::to_string(NR)},
