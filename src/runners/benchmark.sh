@@ -92,9 +92,42 @@ REQUIRED_ARRAYS=(
     PARTITION_CHUNK_VALUES
     JOIN_CHUNK_VALUES
     PARTITION_BLOCK_SIZE_VALUES
-    PARTITION_TASK_GRAIN_VALUES
-    JOIN_TASK_GRAIN_VALUES
-    OFFSET_TASK_GRAIN_VALUES
+)
+
+case "$EXECUTABLE_TARGET" in
+    hashjoin_omp_task|hashjoin_omp_task_wb)
+        PARTITION_PARAM_ARRAY="PARTITION_TASK_BLOCKS_VALUES"
+        JOIN_PARAM_ARRAY="JOIN_TASK_PARTITIONS_VALUES"
+        OFFSET_PARAM_ARRAY="OFFSET_TASK_PARTITIONS_VALUES"
+        PARTITION_PARAM_LABEL="Partition task-block values"
+        JOIN_PARAM_LABEL="Join task-partition values"
+        OFFSET_PARAM_LABEL="Offset task-partition values"
+        PROGRESS_PARAM_LABELS="p_task_blocks=%s j_task_partitions=%s offset_task_partitions=%s"
+        ;;
+    hashjoin_omp_taskloop|hashjoin_omp_taskloop_wb)
+        PARTITION_PARAM_ARRAY="PARTITION_TASKLOOP_GRAIN_VALUES"
+        JOIN_PARAM_ARRAY="JOIN_TASKLOOP_GRAIN_VALUES"
+        OFFSET_PARAM_ARRAY="OFFSET_TASKLOOP_GRAIN_VALUES"
+        PARTITION_PARAM_LABEL="Partition taskloop-grain values"
+        JOIN_PARAM_LABEL="Join taskloop-grain values"
+        OFFSET_PARAM_LABEL="Offset taskloop-grain values"
+        PROGRESS_PARAM_LABELS="p_taskloop_grain=%s j_taskloop_grain=%s offset_taskloop_grain=%s"
+        ;;
+    *)
+        PARTITION_PARAM_ARRAY="PARTITION_TASK_GRAIN_VALUES"
+        JOIN_PARAM_ARRAY="JOIN_TASK_GRAIN_VALUES"
+        OFFSET_PARAM_ARRAY="OFFSET_TASK_GRAIN_VALUES"
+        PARTITION_PARAM_LABEL="Partition task-grain values"
+        JOIN_PARAM_LABEL="Join task-grain values"
+        OFFSET_PARAM_LABEL="Offset task-grain values"
+        PROGRESS_PARAM_LABELS="p_task_grain=%s j_task_grain=%s offset_task_grain=%s"
+        ;;
+esac
+
+REQUIRED_ARRAYS+=(
+    "$PARTITION_PARAM_ARRAY"
+    "$JOIN_PARAM_ARRAY"
+    "$OFFSET_PARAM_ARRAY"
 )
 
 for ARRAY_NAME in "${REQUIRED_ARRAYS[@]}"; do
@@ -104,6 +137,10 @@ for ARRAY_NAME in "${REQUIRED_ARRAYS[@]}"; do
     fi
 done
 
+eval "PARTITION_PARAM_VALUES=(\"\${${PARTITION_PARAM_ARRAY}[@]}\")"
+eval "JOIN_PARAM_VALUES=(\"\${${JOIN_PARAM_ARRAY}[@]}\")"
+eval "OFFSET_PARAM_VALUES=(\"\${${OFFSET_PARAM_ARRAY}[@]}\")"
+
 case "$EXECUTABLE_TARGET" in
     hashjoin_seq)
         make cleanall_seq
@@ -111,20 +148,20 @@ case "$EXECUTABLE_TARGET" in
     hashjoin_omp_loop)
         make cleanall_omp_loop
         ;;
-    hashjoin_omp_loop_opt)
-        make cleanall_omp_loop_opt
-        ;;
-    hashjoin_omp_loop_opt_wb)
-        make cleanall_omp_loop_opt_wb
+    hashjoin_omp_loop_wb)
+        make cleanall_omp_loop_wb
         ;;
     hashjoin_omp_task)
         make cleanall_omp_task
         ;;
-    hashjoin_omp_task_opt)
-        make cleanall_omp_task_opt
+    hashjoin_omp_task_wb)
+        make cleanall_omp_task_wb
         ;;
-    hashjoin_omp_task_opt_wb)
-        make cleanall_omp_task_opt_wb
+    hashjoin_omp_taskloop)
+        make cleanall_omp_taskloop
+        ;;
+    hashjoin_omp_taskloop_wb)
+        make cleanall_omp_taskloop_wb
         ;;
     *)
         echo "Unknown executable target: $EXECUTABLE_TARGET"
@@ -160,9 +197,9 @@ TOTAL=$(( \
     ${#PARTITION_CHUNK_VALUES[@]} * \
     ${#JOIN_CHUNK_VALUES[@]} * \
     ${#PARTITION_BLOCK_SIZE_VALUES[@]} * \
-    ${#PARTITION_TASK_GRAIN_VALUES[@]} * \
-    ${#JOIN_TASK_GRAIN_VALUES[@]} * \
-    ${#OFFSET_TASK_GRAIN_VALUES[@]} * \
+    ${#PARTITION_PARAM_VALUES[@]} * \
+    ${#JOIN_PARAM_VALUES[@]} * \
+    ${#OFFSET_PARAM_VALUES[@]} * \
     REPEAT_COUNT \
 ))
 
@@ -183,9 +220,9 @@ echo "Join schedule values:        ${JOIN_SCHEDULE_VALUES[*]}"
 echo "Partition chunk values:      ${PARTITION_CHUNK_VALUES[*]}"
 echo "Join chunk values:           ${JOIN_CHUNK_VALUES[*]}"
 echo "Partition block-size values: ${PARTITION_BLOCK_SIZE_VALUES[*]}"
-echo "Partition task-grain values: ${PARTITION_TASK_GRAIN_VALUES[*]}"
-echo "Join task-grain values:      ${JOIN_TASK_GRAIN_VALUES[*]}"
-echo "Offset task-grain values:    ${OFFSET_TASK_GRAIN_VALUES[*]}"
+echo "$PARTITION_PARAM_LABEL: ${PARTITION_PARAM_VALUES[*]}"
+echo "$JOIN_PARAM_LABEL:      ${JOIN_PARAM_VALUES[*]}"
+echo "$OFFSET_PARAM_LABEL:    ${OFFSET_PARAM_VALUES[*]}"
 echo "Repeat count:                $REPEAT_COUNT"
 echo "Total runs:                  $TOTAL"
 echo
@@ -203,17 +240,17 @@ for ((RUN_INDEX=1; RUN_INDEX<=REPEAT_COUNT; RUN_INDEX++)); do
                                         for PARTITION_CHUNK in "${PARTITION_CHUNK_VALUES[@]}"; do
                                             for JOIN_CHUNK in "${JOIN_CHUNK_VALUES[@]}"; do
                                                 for PARTITION_BLOCK_SIZE in "${PARTITION_BLOCK_SIZE_VALUES[@]}"; do
-                                                    for PARTITION_TASK_GRAIN in "${PARTITION_TASK_GRAIN_VALUES[@]}"; do
-                                                        for JOIN_TASK_GRAIN in "${JOIN_TASK_GRAIN_VALUES[@]}"; do
-                                                            for OFFSET_TASK_GRAIN in "${OFFSET_TASK_GRAIN_VALUES[@]}"; do
+                                                    for PARTITION_PARAM in "${PARTITION_PARAM_VALUES[@]}"; do
+                                                        for JOIN_PARAM in "${JOIN_PARAM_VALUES[@]}"; do
+                                                            for OFFSET_PARAM in "${OFFSET_PARAM_VALUES[@]}"; do
 
                                                             COUNT=$((COUNT + 1))
 
-                                                            printf '[%d/%d] run=%d/%d N=%s P=%s seed=%s max_key=%s dataset_type=%s p_threads=%s j_threads=%s p_sched=%s j_sched=%s p_chunk=%s j_chunk=%s p_block=%s p_task_grain=%s j_task_grain=%s offset_task_grain=%s --> ' \
+                                                            printf "[%d/%d] run=%d/%d N=%s P=%s seed=%s max_key=%s dataset_type=%s p_threads=%s j_threads=%s p_sched=%s j_sched=%s p_chunk=%s j_chunk=%s p_block=%s ${PROGRESS_PARAM_LABELS} --> " \
                                                                 "$COUNT" "$TOTAL" "$RUN_INDEX" "$REPEAT_COUNT" "$N" "$P" "$SEED" "$MAX_KEY" "$DATASET_TYPE" \
                                                                 "$PARTITION_THREADS" "$JOIN_THREADS" "$PARTITION_SCHEDULE" "$JOIN_SCHEDULE" \
-                                                                "$PARTITION_CHUNK" "$JOIN_CHUNK" "$PARTITION_BLOCK_SIZE" "$PARTITION_TASK_GRAIN" \
-                                                                "$JOIN_TASK_GRAIN" "$OFFSET_TASK_GRAIN"
+                                                                "$PARTITION_CHUNK" "$JOIN_CHUNK" "$PARTITION_BLOCK_SIZE" "$PARTITION_PARAM" \
+                                                                "$JOIN_PARAM" "$OFFSET_PARAM"
 
                                                             runner_args=(
                                                                 "$RUNNER_SCRIPT"
@@ -231,9 +268,9 @@ for ((RUN_INDEX=1; RUN_INDEX<=REPEAT_COUNT; RUN_INDEX++)); do
                                                                 "$PARTITION_CHUNK"
                                                                 "$JOIN_CHUNK"
                                                                 "$PARTITION_BLOCK_SIZE"
-                                                                "$PARTITION_TASK_GRAIN"
-                                                                "$JOIN_TASK_GRAIN"
-                                                                "$OFFSET_TASK_GRAIN"
+                                                                "$PARTITION_PARAM"
+                                                                "$JOIN_PARAM"
+                                                                "$OFFSET_PARAM"
                                                             )
 
                                                             sbatch --parsable --wait "${runner_args[@]}"

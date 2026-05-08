@@ -10,7 +10,7 @@
 set -euo pipefail
 
 if [ "$#" -ne 17 ]; then
-    echo "Usage: $0 EXECUTABLE NR NS SEED MAX_KEY P DATASET_TYPE PARTITION_THREADS JOIN_THREADS PARTITION_SCHEDULE JOIN_SCHEDULE PARTITION_CHUNK JOIN_CHUNK PARTITION_BLOCK_SIZE PARTITION_TASK_GRAIN JOIN_TASK_GRAIN OFFSET_TASK_GRAIN"
+    echo "Usage: $0 EXECUTABLE NR NS SEED MAX_KEY P DATASET_TYPE PARTITION_THREADS JOIN_THREADS PARTITION_SCHEDULE JOIN_SCHEDULE PARTITION_CHUNK JOIN_CHUNK PARTITION_BLOCK_SIZE PARTITION_PARAM JOIN_PARAM OFFSET_PARAM"
     exit 1
 fi
 
@@ -28,9 +28,9 @@ JOIN_SCHEDULE="${11}"
 PARTITION_CHUNK="${12}"
 JOIN_CHUNK="${13}"
 PARTITION_BLOCK_SIZE="${14}"
-PARTITION_TASK_GRAIN="${15:-}"
-JOIN_TASK_GRAIN="${16:-}"
-OFFSET_TASK_GRAIN="${17:-}"
+PARTITION_PARAM="${15:-}"
+JOIN_PARAM="${16:-}"
+OFFSET_PARAM="${17:-}"
 
 SUBMIT_DIR="${SLURM_SUBMIT_DIR:-$(pwd)}"
 cd "$SUBMIT_DIR"
@@ -43,6 +43,8 @@ if [ ! -x "$EXECUTABLE" ]; then
     echo "Executable not found or not executable: $EXECUTABLE"
     exit 1
 fi
+
+EXECUTABLE_TARGET="$(basename "$EXECUTABLE")"
 
 MAX_THREADS="$PARTITION_THREADS"
 if [ "$JOIN_THREADS" -gt "$MAX_THREADS" ]; then
@@ -67,9 +69,23 @@ runner_args=(
     --partition-chunk "$PARTITION_CHUNK"
     --join-chunk "$JOIN_CHUNK"
     --partition-block-size "$PARTITION_BLOCK_SIZE"
-    --partition-task-grain "$PARTITION_TASK_GRAIN"
-    --join-task-grain "$JOIN_TASK_GRAIN"
-    --offset-task-grain "$OFFSET_TASK_GRAIN"
 )
+
+case "$EXECUTABLE_TARGET" in
+    hashjoin_omp_task|hashjoin_omp_task_wb)
+        runner_args+=(
+            --partition-task-blocks "$PARTITION_PARAM"
+            --join-task-partitions "$JOIN_PARAM"
+            --offset-task-partitions "$OFFSET_PARAM"
+        )
+        ;;
+    *)
+        runner_args+=(
+            --partition-task-grain "$PARTITION_PARAM"
+            --join-task-grain "$JOIN_PARAM"
+            --offset-task-grain "$OFFSET_PARAM"
+        )
+        ;;
+esac
 
 "${runner_args[@]}"
