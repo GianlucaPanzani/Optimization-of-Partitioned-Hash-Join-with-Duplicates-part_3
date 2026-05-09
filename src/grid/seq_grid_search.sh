@@ -9,7 +9,7 @@ PARTITION_THREAD_VALUES=(1)
 JOIN_THREAD_VALUES=(1)
 
 # Dataset distributions type (e.g. skewed_80_5 means 80% of records go to 5% of the partitions)
-DATASET_TYPE_VALUES=(uniform skewed_80_5 skewed_90_10)
+DATASET_TYPE_VALUES=(uniform skewed_90_5 skewed_90_1)
 
 # --- Unused parameters for the sequential version ---
 PARTITION_SCHEDULE_VALUES=(static)
