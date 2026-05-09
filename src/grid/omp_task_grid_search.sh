@@ -21,14 +21,14 @@ OFFSET_TASK_PARTITIONS_VALUES=(1)
 
 # --- Reduced OMP combinations ---
 # OpenMP thread configurations
-#PARTITION_THREAD_VALUES=(64)
-#JOIN_THREAD_VALUES=(32)
+PARTITION_THREAD_VALUES=(64)
+JOIN_THREAD_VALUES=(32)
 # Block size used by the parallel partitioning implementation (for the block-based histogram/scatter phase)
-#PARTITION_BLOCK_SIZE_VALUES=(32768)
+PARTITION_BLOCK_SIZE_VALUES=(32768)
 # Explicit task batch sizes (partition blocks measured in input blocks, join/offset batches measured in partitions)
-#PARTITION_TASK_BLOCKS_VALUES=(2 4)
-#JOIN_TASK_PARTITIONS_VALUES=(4 8)
-#OFFSET_TASK_PARTITIONS_VALUES=(2 4)
+PARTITION_TASK_BLOCKS_VALUES=(2 4)
+JOIN_TASK_PARTITIONS_VALUES=(4 8)
+OFFSET_TASK_PARTITIONS_VALUES=(2 4)
 
 # --- Unused parameters for the OMP task version ---
 PARTITION_SCHEDULE_VALUES=(auto)
