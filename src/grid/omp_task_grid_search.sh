@@ -27,7 +27,7 @@ JOIN_THREAD_VALUES=(32)
 PARTITION_BLOCK_SIZE_VALUES=(32768)
 # Explicit task batch sizes (partition blocks measured in input blocks, join/offset batches measured in partitions)
 PARTITION_TASK_BLOCKS_VALUES=(2 4)
-JOIN_TASK_PARTITIONS_VALUES=(4 8)
+JOIN_TASK_PARTITIONS_VALUES=(2 4)
 OFFSET_TASK_PARTITIONS_VALUES=(2 4)
 
 # --- Unused parameters for the OMP task version ---
