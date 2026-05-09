@@ -1,5 +1,0 @@
-executable=hashjoin_omp_taskloop_wb
-dataset-type=skewed_80_5
-join_count=32812326695
-checksum1=3949874054291418773
-checksum2=4214050837788414649
