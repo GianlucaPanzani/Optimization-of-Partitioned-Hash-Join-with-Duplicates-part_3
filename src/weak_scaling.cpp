@@ -785,7 +785,8 @@ int main(int argc, char** argv) {
         "skewed_90_5",
         "skewed_90_1"
     };
-    const std::size_t n_combs = dataset_type_names.size() * cases.size();
+    const std::size_t repeat_count = 5;
+    const std::size_t n_combs = dataset_type_names.size() * cases.size() * repeat_count;
 
     if (!is_power_of_two(P)) {
         std::cerr << "Error: in this reference implementation, P must be a power of two.\n";
@@ -804,64 +805,67 @@ int main(int argc, char** argv) {
         }
 
         for (const WeakScalingCase& current : cases) {
-            ++counter;
-
             const std::size_t NR = current.n;
             const std::size_t NS = current.n;
             const auto R = generate_relation(NR, seed, max_key, P, dataset_cfg);
             const auto S = generate_relation(NS, seed ^ 0xdeadebdecdeedef1ULL, max_key, P, dataset_cfg);
 
-            OmpConfig cfg{};
-            cfg.partition_threads = current.threads;
-            cfg.join_threads = current.threads;
-            cfg.partition_schedule = omp_sched_guided;
-            cfg.join_schedule = omp_sched_guided;
-            cfg.partition_schedule_name = "guided";
-            cfg.join_schedule_name = "guided";
-            cfg.partition_chunk = 8;
-            cfg.join_chunk = 8;
-            cfg.partition_block_size = 32768;
-            cfg.dataset_type_name = dataset_cfg.type;
+            for (std::size_t repeat = 1; repeat <= repeat_count; ++repeat) {
+                ++counter;
 
-            std::cout << "[" << counter << "/" << n_combs << "] weak_scaling"
-                      << " --> dataset_type=" << dataset_cfg.type
-                      << " threads=" << current.threads
-                      << " nr=" << NR
-                      << " ns=" << NS << "\n";
+                OmpConfig cfg{};
+                cfg.partition_threads = current.threads;
+                cfg.join_threads = current.threads;
+                cfg.partition_schedule = omp_sched_guided;
+                cfg.join_schedule = omp_sched_guided;
+                cfg.partition_schedule_name = "guided";
+                cfg.join_schedule_name = "guided";
+                cfg.partition_chunk = 8;
+                cfg.join_chunk = 8;
+                cfg.partition_block_size = 32768;
+                cfg.dataset_type_name = dataset_cfg.type;
 
-            const double t0 = get_time();
-            const JoinResult result = partitioned_hash_join(R, S, P, cfg);
-            const double t1 = get_time();
-            const double tot_time_sec = t1 - t0;
+                std::cout << "[" << counter << "/" << n_combs << "] weak_scaling"
+                          << " --> dataset_type=" << dataset_cfg.type
+                          << " threads=" << current.threads
+                          << " nr=" << NR
+                          << " ns=" << NS
+                          << " repeat=" << repeat << "/" << repeat_count << "\n";
 
-            const std::uint64_t total_elements = NR + NS;
-            const double part_throughput = compute_throughput(total_elements, result.part_time_sec);
-            const double join_throughput = compute_throughput(total_elements, result.join_time_sec);
-            const double total_throughput = compute_throughput(total_elements, tot_time_sec);
-            const ResultMap results_map = {
-                {"checksum1", std::to_string(result.checksum1)},
-                {"checksum2", std::to_string(result.checksum2)},
-                {"dataset_type", dataset_cfg.type},
-                {"join_chunk", std::to_string(cfg.join_chunk)},
-                {"join_count", std::to_string(result.join_count)},
-                {"join_schedule", cfg.join_schedule_name},
-                {"join_threads", std::to_string(cfg.join_threads)},
-                {"join_throughput", std::to_string(join_throughput)},
-                {"join_time", std::to_string(result.join_time_sec)},
-                {"max_key", std::to_string(max_key)},
-                {"nr", std::to_string(NR)},
-                {"ns", std::to_string(NS)},
-                {"partition_block_size", std::to_string(cfg.partition_block_size)},
-                {"partition_chunk", std::to_string(cfg.partition_chunk)},
-                {"partition_schedule", cfg.partition_schedule_name},
-                {"partition_threads", std::to_string(cfg.partition_threads)},
-                {"partition_throughput", std::to_string(part_throughput)},
-                {"partition_time", std::to_string(result.part_time_sec)},
-                {"scaling_type", "weak"},
-                {"time_sec", std::to_string(tot_time_sec)},
-                {"total_throughput", std::to_string(total_throughput)}
-            };
-            append_to_csv(filepath, results_map);
+                const double t0 = get_time();
+                const JoinResult result = partitioned_hash_join(R, S, P, cfg);
+                const double t1 = get_time();
+                const double tot_time_sec = t1 - t0;
+
+                const std::uint64_t total_elements = NR + NS;
+                const double part_throughput = compute_throughput(total_elements, result.part_time_sec);
+                const double join_throughput = compute_throughput(total_elements, result.join_time_sec);
+                const double total_throughput = compute_throughput(total_elements, tot_time_sec);
+                const ResultMap results_map = {
+                    {"checksum1", std::to_string(result.checksum1)},
+                    {"checksum2", std::to_string(result.checksum2)},
+                    {"dataset_type", dataset_cfg.type},
+                    {"join_chunk", std::to_string(cfg.join_chunk)},
+                    {"join_count", std::to_string(result.join_count)},
+                    {"join_schedule", cfg.join_schedule_name},
+                    {"join_threads", std::to_string(cfg.join_threads)},
+                    {"join_throughput", std::to_string(join_throughput)},
+                    {"join_time", std::to_string(result.join_time_sec)},
+                    {"max_key", std::to_string(max_key)},
+                    {"nr", std::to_string(NR)},
+                    {"ns", std::to_string(NS)},
+                    {"partition_block_size", std::to_string(cfg.partition_block_size)},
+                    {"partition_chunk", std::to_string(cfg.partition_chunk)},
+                    {"partition_schedule", cfg.partition_schedule_name},
+                    {"partition_threads", std::to_string(cfg.partition_threads)},
+                    {"partition_throughput", std::to_string(part_throughput)},
+                    {"partition_time", std::to_string(result.part_time_sec)},
+                    {"scaling_type", "weak"},
+                    {"time_sec", std::to_string(tot_time_sec)},
+                    {"total_throughput", std::to_string(total_throughput)}
+                };
+                append_to_csv(filepath, results_map);
+            }
         }
     }
 
