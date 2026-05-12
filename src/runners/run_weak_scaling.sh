@@ -23,3 +23,5 @@ export OMP_NUM_THREADS=32
 export OMP_DISPLAY_ENV="${OMP_DISPLAY_ENV:-false}"
 
 srun ./weak_scaling
+
+cleanall_weak_scaling

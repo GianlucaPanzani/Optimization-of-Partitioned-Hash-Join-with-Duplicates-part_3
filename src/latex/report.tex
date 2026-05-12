@@ -21,7 +21,7 @@
     \vspace{2.0cm}
     {\LARGE \textbf{Optimization of Partitioned Hash Join with Duplicates}\par}
     \vspace{1.2cm}
-    {\large Assignment 2 - Report\par}
+    {\large Module 3 - Report\par}
     \vfill
     {\large Gianluca Panzani\par}
     \vspace{0.3cm}
@@ -34,186 +34,186 @@
 \pagenumbering{arabic}
 
 
+% Implementation
 \section{Implementation}
-The repository is organized around one sequential baseline and four optimized variants of the same partitioned hash-join pipeline. The core source files are \texttt{hashjoin\_seq.cpp} (sequential reference, baseline), \texttt{hashjoin\_par\_p.cpp} (parallel partition phase, sequential join phase), \texttt{hashjoin\_par\_pj.cpp} (parallel partition + parallel join, with contiguous partition ranges), \texttt{hashjoin\_par\_pj\_wb.cpp} (adds workload balancing of partitions in the join phase), and \texttt{hashjoin\_par\_pj\_wb\_map.cpp} (same balanced scheduling, plus flatter memory layout for partition counters/offsets and a custom flat hash table in the join build phase).
-
-All executables preserve the same algorithmic structure: deterministic generation of relations \texttt{R} and \texttt{S}, partitioning of both relations (histogram, exclusive prefix sum, scatter), local build/probe join on matching partition ids, and reduction into \texttt{join\_count}, \texttt{checksum1}, \texttt{checksum2}.
-Keeping this structure unchanged across versions is important because it allows direct and fair comparisons between optimization steps.  
-Phase timings are exported separately (partition, join and total), so each code change can be analyzed also at phase level.
-
-\subsection{Hash Function Choice}
-In Module 1, the simple \texttt{mask} mapping was the fastest option in my tests.  
-However, because of requirments, i haven't kept the same mapping in this module. So I switched to a \texttt{xorshift}-based mapping before masking, which is not as fast as the previous one, but is still efficient and effective.
-
-I did not choose the \texttt{fmix32fold}-style mapping here because it is heavier in arithmetic operations and, in previous experiments, it gave worse performance than \texttt{xorshift}.
-
-\subsection{Benchmark}
-Benchmark automation is implemented in \texttt{benchmark.sh}. The script takes as input the executable target, the grid serch file and executes all combinations via Slurm (\texttt{run\_with\_slurm.sh}).  
-For each run, the executable appends one CSV row containing configuration parameters, phase times, speedup and so on.
-
-In the current campaign, fixed values are \texttt{nr=50'000'000}, \texttt{ns=50'000'000}, \texttt{P=256}, \texttt{seed=13}, \texttt{max\_key=1'000'000}; \texttt{partition\_threads} and \texttt{join\_threads} vary over \(\{4,8,16,32,64\}\) for the parallelized versions, while the sequential baseline runs with one thread.
-
-The Slurm runner (\texttt{runners/run\_with\_slurm.sh}) is built to run a single combination of parameters of the grid and pins execution to \texttt{node05}, avoiding machine-level variability.
 
 
+% Implementation
+\subsection{Implementation}
+This module keeps the same partitioned hash-join pipeline used in the previous report: deterministic input generation, partitioning of both relations, independent local joins on equal partition ids, and final accumulation of \texttt{join\_count}, \texttt{checksum1} and \texttt{checksum2}. The partition mapping is the same xorshift-style mixer used before:
+\[
+    key \mathrel{\hat{=}} key \gg 33,\quad
+    key \mathrel{\hat{=}} key \gg 17,\quad
+    key \mathrel{\hat{=}} key \gg 9,\quad
+    pid = key \& (P-1).
+\]
+The implementation work in this module is therefore focused on expressing the existing algorithm with OpenMP and on evaluating how OpenMP scheduling reacts to uniform and skewed partition workloads.
+
+The repository now contains one sequential baseline and six OpenMP executables. The main OpenMP families are loop, explicit-task and taskloop; the source files are the corresponding \texttt{hashjoin\_omp\_*} files, plus the \texttt{\_wb} versions that add workload-aware join ordering. All versions use the same flat open-addressing count table in the local build/probe phase, so the comparison is mostly about the parallel execution model and scheduling policy, not about a different join algorithm.
+
+The evaluation is based on a grid-search workflow. Instead of choosing one OpenMP configuration manually, each family is first executed on a larger grid of thread counts, schedules, chunks, block sizes and task grains. The resulting CSV files are then analyzed to identify stable regions, not only isolated minimum points. The final plots and tables use a reduced grid derived from this first exploration, so the reported results remain representative while avoiding an unnecessarily large benchmark campaign.
+
+
+% Parameters
+\subsection{Parameters}
+The benchmark scripts run Slurm jobs on one node of the \texttt{spmcluster} and append one CSV row per configuration in \texttt{src/results/}. The fixed parameters of the main campaign are \(N_R=N_S=50\,000\,000\), \(P=256\), \texttt{seed=13}, \texttt{max\_key=1\,000\,000} and block size \(32768\) in the reduced grid.
+
+The initial grid is wider and is different for each source-family type. The loop grid explores OpenMP schedules (\texttt{static}, \texttt{dynamic}, \texttt{guided}), chunk sizes, partition/join thread counts and partition block sizes. The explicit-task grid explores the number of input blocks per partition task, the number of partitions per join task, offset-task granularity and thread counts. The taskloop grid explores the same decomposition through \texttt{taskloop} grainsizes. Each family has its own statistics notebook/file (\texttt{omp\_loop\_statistics.ipynb}, \texttt{omp\_task\_statistics.ipynb} and \texttt{omp\_taskloop\_statistics.ipynb}) used to summarize the larger grid and select the reduced one.
+
+The reduced grid used for the final results keeps the most stable choices found by those statistics files: guided scheduling for loop variants, explicit task grains in the range 2--4 for the task variants, taskloop grains in the range 2--8 for taskloop variants, 32 join threads for most best points, and 32 or 64 partition threads depending on the implementation.
+
+Three datasets are measured. The uniform dataset is the same pseudo-random generation scheme used previously. The skewed datasets are generated with the format \texttt{skewed\_R\_H}: \(R\%\) of records are sampled from keys that map to the first \(H\%\) of partitions. In the final campaign I used \texttt{skewed\_90\_5} and \texttt{skewed\_90\_1}, which concentrate 90\% of the records respectively into about 13 and 3 hot partitions.
+
+
+% Parallelization Strategy
 \section{Parallelization Strategy}
-Parallelization is introduced phase-by-phase, without changing the global algorithm.
+The independent partition structure remains the main source of parallelism. The difference with respect to the C++ threaded version is that thread management, loop scheduling and task queues are delegated to OpenMP.
 
-\subsection{Partition and join phases}
-For each relation, the partition pipeline, which is parallelized in all the parallel executable variants, keeps the standard three stages:
-\begin{enumerate}
-    \item \textit{Histogram:} input is split into chunks and each thread builds a local histogram over \(P\) partitions.
-    \item \textit{Prefix sum:} local histograms are reduced into a global histogram, then an exclusive prefix sum computes global partition starts. In the current code this step is \textbf{not parallelized}: it is executed as a serial scan over the \(P\) counters, followed by a serial construction of per-thread offsets.
-    \item \textit{Scatter:} each thread writes its chunk into the output using thread-specific offsets derived from the prefix stage.
-\end{enumerate}
-The key design detail is that scatter uses precomputed thread-local offsets, so the hot loop does not require atomics or locks.
-
-After partitioning, partitions are independent units of work and, in this way, also the join phase doesn't need locks.
-So, at the end, the code is organized like follows:
-\begin{itemize}
-    \item \texttt{hashjoin\_seq}: join and partition phases are both sequential.
-    \item \texttt{hashjoin\_par\_p}: join is still sequential; only partition is parallel.
-    \item \texttt{hashjoin\_par\_pj}: partitions are split into contiguous ranges across join threads.
-    \item \texttt{hashjoin\_par\_pj\_wb}: partitions are assigned with greedy load balancing based on their size.
-    \item \texttt{hashjoin\_par\_pj\_wb\_map}: same balanced scheduling, plus a flat open-addressing count table in build/probe and flat arrays in partition counters/offsets.
-\end{itemize}
-
-\subsection{What remains mostly sequential}
-The global prefix-sum step and the final reduction of per-thread join results are lightweight compared with histogram/scatter/probe loops, so they are kept simple. In practice, with \(P=256\), this serial part has low absolute cost compared with the full partition and join loops. This is coherent with the measured behavior: once partition and join loops are parallelized, remaining bottlenecks come mostly from memory traffic and per-thread overhead at high thread counts, not from control-heavy serial code.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.32\linewidth]{../img/omp_statistics/01_omp_loop_best_time_thread_heatmap.png}\hfill
+    \includegraphics[width=0.32\linewidth]{../img/omp_statistics/01_omp_task_best_time_thread_heatmap.png}\hfill
+    \includegraphics[width=0.32\linewidth]{../img/omp_statistics/01_omp_taskloop_best_time_thread_heatmap.png}
+    \caption{Thread-count sensitivity from the large grid search for loop, explicit-task and taskloop OpenMP implementations.}
+    \label{fig:omp-thread-heatmaps}
+\end{figure}
 
 
+% Partition phase
+\subsection{Partition phase}
+All OpenMP variants use a blocked partitioning pipeline. Each relation is split into input blocks; the histogram step maps keys to partition ids and fills block-local histograms. The global partition starts are then computed with an exclusive prefix sum over the \(P\) partition counters, and a second parallel step scatters records into contiguous partition ranges using precomputed block offsets. The expensive loops are therefore the histogram and scatter loops; the prefix scan remains small because \(P=256\).
+
+In \texttt{hashjoin\_omp\_loop.cpp} and \texttt{hashjoin\_omp\_loop\_wb.cpp}, histogram and scatter are expressed with \texttt{omp for schedule(runtime)}. This makes the same executable usable with \texttt{static}, \texttt{dynamic} and \texttt{guided} policies. In \texttt{hashjoin\_omp\_task.cpp}, explicit tasks are created over batches of input blocks and offset partitions. In \texttt{hashjoin\_omp\_taskloop.cpp}, the same decomposition is expressed with \texttt{omp taskloop grainsize(...)}.
+
+
+% Join phase
+\subsection{Join phase}
+After partitioning, each partition can be joined independently. The loop implementation uses an OpenMP reduction over \texttt{join\_count}, \texttt{checksum1} and \texttt{checksum2}. The explicit-task implementation writes each partition result into a private slot of a \texttt{partial} array and reduces it sequentially after \texttt{taskwait}. The taskloop implementation follows the same partial-result scheme, but lets OpenMP create the tasks from a \texttt{taskloop}.
+
+The \texttt{\_wb} variants address skew by ordering partitions by estimated work,
+\[
+    |R_p| + |S_p|,
+\]
+from largest to smallest before scheduling the local joins. The loop \texttt{\_wb} version then uses \texttt{schedule(dynamic,1)} on this ordered list; the task and taskloop \texttt{\_wb} versions create tasks over the ordered list. This is the main difference under skewed datasets: without this reordering, a few hot partitions can dominate the total join time even if many threads are available.
+
+
+% Scaling files
+\subsection{Scaling files}
+\texttt{strong\_scaling.cpp} and \texttt{weak\_scaling.cpp} are dedicated benchmark executables. They use the workload-balanced loop strategy with guided partition scheduling and dynamic join scheduling, because this was the most stable choice across datasets. Strong scaling fixes \(N_R=N_S=50\,000\,000\) and varies the thread count. Weak scaling increases the input from 10M to 80M records per relation while increasing the thread count from 4 to 32.
+
+
+% OpenMP tuning
+\subsection{OpenMP tuning}
+The statistics plots confirm the reason for reducing the benchmark grid. Loop scheduling is mostly sensitive to the partition/join thread combination and to schedule choice, while task-based implementations are more sensitive to task granularity. Very fine grains create too many tasks; very coarse grains reduce balancing opportunities. This is why the final grid keeps only the smaller grain values that were consistently close to the best regions.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.48\linewidth]{../img/omp_statistics/02_omp_loop_parameter_sensitivity.png}\hfill
+    \includegraphics[width=0.48\linewidth]{../img/omp_statistics/02_omp_taskloop_parameter_sensitivity.png}
+    \caption{Examples of parameter sensitivity used to reduce the final benchmark grid.}
+    \label{fig:omp-parameter-sensitivity}
+\end{figure}
+
+
+% Results Analysis
 \section{Results Analysis}
-All plots in this section are generated from the benchmark CSV files in \texttt{src/results/}.  
-The sequential baseline mean total time is \(4.191\) s.
+All results below are generated from \texttt{src/results/}. The best sequential times in the current campaign are \(3.114\) s for the uniform dataset, \(3.258\) s for \texttt{skewed\_90\_5}, and \(3.256\) s for \texttt{skewed\_90\_1}. The best Module 2 C++ threaded result available in \texttt{src/old\_results/} was \(0.507\) s for \texttt{hashjoin\_par\_pj\_wb\_map}; the best broad-grid OpenMP result here is \(0.539\) s, so the final OpenMP implementation is close in absolute time but does not clearly improve over the previous C++ threaded best case.
 
-Note that in the matrix-like plots of this section we have that:
-\begin{itemize}
-    \item the bars in each position of the matrix represent the value of \texttt{seq}, \texttt{par\_p}, \texttt{par\_pj}, \texttt{par\_pj\_wb}, \texttt{par\_pj\_wb\_map} (from left to right),
-    \item the number of \texttt{join\_threads} and \texttt{part\_threads}, which are on the two axes, vary over \(\{1,4,8,16,32,64\}\).
-\end{itemize}
 
-\subsection{Join and Partition Time}
-The phase-level matrices at the end of the section, show the central behavior of the implementation.
-
-Partition time scales well from 4 to 32 threads, then flattens around \(0.92\) s at 4 partition threads and around \(0.36\)--\(0.37\) s at 32--64 partition threads.
-This indicates good early scaling followed by memory-system saturation.
-
-Join time is where variants differ the most. The executables \texttt{par\_pj} and \texttt{par\_pj\_wb} reduce join time to about \(0.18\) s in the best area.  
-The \texttt{par\_pj\_wb\_map} variant improves further, reaching \(0.13\) s (best run, 32 partition threads and 16 join threads), confirming that data-structure locality in build/probe is a major factor.
-
-As we can see, partition time is similar across all parallel variants (\texttt{par\_p}, \texttt{par\_pj}, \texttt{par\_pj\_wb}, \texttt{par\_pj\_wb\_map}) because they use the same partition implementation, in fact the main variation comes from thread count.
-In contrast, once the join phase is parallelized (\texttt{par\_pj}, \texttt{par\_pj\_wb}, \texttt{par\_pj\_wb\_map}), join time differences become more evident, with a clear gap between \texttt{par\_pj\_wb} and \texttt{par\_pj\_wb\_map}.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.49\linewidth]{../img/001_partition_time_matrix_nr50000000_ns50000000_maxkey1000000.png}\hfill
-    \includegraphics[width=0.49\linewidth]{../img/003_join_time_matrix_nr50000000_ns50000000_maxkey1000000.png}
-    \caption{Partition-time and join-time matrices for each combination of the number of join threads (rows of the matrix) and partition threads (columns of the matrix).}
-    \label{fig:times-matrices}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.62\linewidth]{../img/005_time_sec_matrix_nr50000000_ns50000000_maxkey1000000.png}
-    \caption{Total execution-time (\texttt{time\_sec}) matrix for each combination of the number of join threads (rows of the matrix) and partition threads (columns of the matrix).}
-    \label{fig:time-sec-matrix}
-\end{figure}
-
-\subsection{Speedup}
-Global speedup is computed against the sequential baseline.
-
-The table confirms the optimization trajectory: partition-only parallelization gives limited gains, while parallel join plus balanced scheduling gives the main jump; flatter data structures in \texttt{par\_pj\_wb\_map} provide the final improvement.
+% Uniform dataset
+\subsection{Uniform dataset}
+On the uniform workload, all complete OpenMP implementations are close once both partition and join are parallelized. The best time is obtained by \texttt{hashjoin\_omp\_taskloop\_wb} with 64 partition threads and 32 join threads: \(0.539\) s, corresponding to \(5.78\times\) speedup over the current sequential baseline. The difference between the best loop, task and taskloop versions is small; this means that, for uniform partitions, OpenMP tasking does not add much by itself. The dominant gains come from parallelizing the join and from keeping the local hash table cache-friendly.
 
 \begin{table}[H]
     \centering
+    \small
     \begin{tabular}{lrrrr}
         \toprule
-        Variant & Best \(T_{part}\) & Best \(T_{join}\) & Best time [s] & Speedup \\
+        Variant & \(T_{part}\) & \(T_{join}\) & Best time [s] & Speedup \\
         \midrule
-        \texttt{hashjoin\_par\_p} & 64 & 32 & 2.394 & \(1.75\times\) \\
-        \texttt{hashjoin\_par\_pj} & 64 & 16 & 0.549 & \(7.63\times\) \\
-        \texttt{hashjoin\_par\_pj\_wb} & 32 & 16 & 0.545 & \(7.69\times\) \\
-        \texttt{hashjoin\_par\_pj\_wb\_map} & 32 & 16 & 0.507 & \(8.26\times\) \\
+        \texttt{omp\_loop} & 32 & 32 & 0.568 & \(5.49\times\) \\
+        \texttt{omp\_loop\_wb} & 32 & 32 & 0.561 & \(5.55\times\) \\
+        \texttt{omp\_task} & 64 & 32 & 0.545 & \(5.72\times\) \\
+        \texttt{omp\_task\_wb} & 64 & 32 & 0.542 & \(5.74\times\) \\
+        \texttt{omp\_taskloop} & 64 & 32 & 0.544 & \(5.73\times\) \\
+        \texttt{omp\_taskloop\_wb} & 64 & 32 & 0.539 & \(5.78\times\) \\
         \bottomrule
     \end{tabular}
-    \caption{Best observed configuration per executable.}
-    \label{tab:best-speedups}
+    \caption{Best observed uniform-dataset configuration per OpenMP executable.}
+    \label{tab:uniform-best}
 \end{table}
 
-The gain of workload balancing alone (\texttt{par\_pj\_wb} vs \texttt{par\_pj}) is small in this campaign.  
-With \(P=256\), \(NS=NR=5 \cdot 10^7\) (which means that the total number of elements is $10^8$) and 32 join threads, each thread still processes a lot of partitions.
-So a first observation could be that the workload could be close to the average even with contiguous assignment.
-Another one, instead, could be that the size of the partitions is very similar, so the balancing isn't much useful. 
-For this reasons, balancing has limited improvement and the extra speedup is almost absent.
-A larger benefit could be expected when the dataset is smaller or when effective workload is concentrated in fewer hot partitions.
-
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.62\linewidth]{../img/006_speedup_total_throughput_matrix_nr50000000_ns50000000_maxkey1000000.png}
-    \caption{Total speedup matrix over thread combinations and variants.}
-    \label{fig:speedup}
+    \includegraphics[width=0.48\linewidth]{../img/001_selected_best_tot_sec_50000000_50000000_1000000.png}\hfill
+    \includegraphics[width=0.48\linewidth]{../img/005_selected_best_phase_breakdown_50000000_50000000_1000000.png}
+    \caption{Best total time and phase breakdown for the current OpenMP campaign.}
+    \label{fig:selected-best}
 \end{figure}
 
-\subsection{Strong Scaling}
-Strong scaling is measured by fixing input size and increasing threads.
 
-On the diagonal (\(T_{part} = T_{join}\), with $T$ number of threads), \texttt{par\_pj\_wb\_map} reaches:
+% Skewed datasets
+\subsection{Skewed datasets}
+The skewed datasets change both load balance and the actual join workload. The final match count rises from about \(2.50 \cdot 10^9\) on uniform data to \(4.06 \cdot 10^{10}\) on \texttt{skewed\_90\_5} and \(1.74 \cdot 10^{11}\) on \texttt{skewed\_90\_1}. Therefore the slowdown is not only scheduling overhead: the hot partitions also contain many more duplicate matches.
 
-\begin{itemize}
-    \item speedup \(3.09\times\) at 4 threads;
-    \item speedup \(6.87\times\) at 16 threads;
-    \item speedup \(7.62\times\) at 64 threads.
-\end{itemize}
+\begin{table}[H]
+    \centering
+    \small
+    \begin{tabular}{lrrrr}
+        \toprule
+        Dataset & Best OpenMP variant & Best time [s] & Join time [s] & Speedup \\
+        \midrule
+        \texttt{uniform} & \texttt{taskloop\_wb} & 0.539 & 0.191 & \(5.78\times\) \\
+        \texttt{skewed\_90\_5} & \texttt{taskloop\_wb} & 0.501 & 0.163 & \(6.51\times\) \\
+        \texttt{skewed\_90\_1} & \texttt{taskloop\_wb} & 1.101 & 0.781 & \(2.96\times\) \\
+        \bottomrule
+    \end{tabular}
+    \caption{Best OpenMP result for each dataset, using the corresponding sequential baseline.}
+    \label{tab:skewed-best}
+\end{table}
 
-For the best implementations, strong scaling improves well up to roughly 16--32 threads, then a clear plateau appears. This suggests that computation is no longer the dominant cost at high thread counts and execution becomes constrained by hardware/system limits.
-
-In fact, the best result is got with \texttt{par\_pj\_wb\_map} using 16 join threads and 32 partition threads, with a speedup of about \(8.26\times\).
+The workload-balanced versions are essential under skew. For \texttt{skewed\_90\_5}, the loop version improves from \(1.281\) s to \(0.525\) s when workload balancing is enabled. For \texttt{skewed\_90\_1}, the same change improves from \(2.558\) s to \(1.120\) s. The strongest skew still remains slower because a very small number of partitions becomes too large to be split further by the current partition-level join strategy.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.58\linewidth]{../img/011_strong_scaling_speedup_vs_threads_by_exec_type_N50000000.png}
-    \caption{Strong-scaling speedup versus number of threads for each executable type.}
+    \includegraphics[width=0.58\linewidth]{../img/006_selected_best_skew_penalty_vs_uniform_50000000_50000000_1000000.png}
+    \caption{Penalty of the skewed datasets with respect to the uniform dataset.}
+    \label{fig:skew-penalty}
+\end{figure}
+
+
+% Strong and weak scaling
+\subsection{Strong and weak scaling}
+Strong scaling is measured with the dedicated workload-balanced loop executable. On the uniform dataset, speedup grows up to \(6.34\times\) at 32 threads and then slightly decreases at 64 threads. The \texttt{skewed\_90\_5} dataset follows the same shape but with a lower plateau, while \texttt{skewed\_90\_1} saturates very early around \(2.9\times\). This confirms that the current granularity is the partition: if one hot partition dominates, adding more threads cannot split that single local join.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.48\linewidth]{../img/011_strong_scalability_speedup_dedicated.png}\hfill
+    \includegraphics[width=0.48\linewidth]{../img/012_strong_scalability_efficiency_dedicated.png}
+    \caption{Strong-scaling speedup and efficiency for the dedicated workload-balanced OpenMP executable.}
     \label{fig:strong-scaling}
 \end{figure}
 
-\subsection{Weak Scaling}
-Weak-scaling results are now measured with a dedicated campaign (\texttt{weak\_scaling.cpp}) and grid:
-\(N \in \{10,20,40,80\}\) million records per relation and \(T \in \{4,8,16,32\}\) (with \(T=T_{part}=T_{join}\)).
-Each \((N,T)\) point is repeated 5 times, then averaged to avoid unstable measures.
-
-The weak-scaling curves are consistent across input sizes. For each executable we have:
-\begin{itemize}
-    \item speedup \(1.65\times\) at 8 threads;
-    \item speedup \(2.36\)--\(2.55\times\) at 16 threads;
-    \item speedup \(2.64\)--\(2.82\times\) at 32 threads.
-\end{itemize}
-Overall, weak scalability is only moderate: speedup increases with thread count but clearly sublinearly. Since larger inputs do not preserve near-constant execution efficiency, the main limitation appears to come from machine-level bottlenecks that become more visible at scale, most likely memory bandwidth, cache contention and synchronization overhead.
+Weak scaling is moderate. Uniform data keeps the best scaled speedup, reaching about \(2.20\times\) at 32 threads relative to the 4-thread base point, but efficiency still drops to about \(0.28\). The \texttt{skewed\_90\_1} curve is much worse and reaches only \(0.89\times\) scaled speedup at 32 threads, because the enlarged hot partitions increase both imbalance and duplicate-match work.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.58\linewidth]{../img/010_weak_scaling_speedup_vs_threads_by_N_weak_scaling.png}
-    \caption{Weak-scaling speedup versus number of threads for each \(N\).}
+    \includegraphics[width=0.48\linewidth]{../img/013_weak_scalability_scaled_speedup_dedicated.png}\hfill
+    \includegraphics[width=0.48\linewidth]{../img/014_weak_scalability_efficiency_dedicated.png}
+    \caption{Weak-scaling scaled speedup and efficiency for uniform and skewed datasets.}
     \label{fig:weak-scaling}
 \end{figure}
 
 
-\section{Correctness validation}
-Correctness checks are handled by \texttt{checker.cpp}. The checker scans the output directory (\texttt{out/} by default), reads all regular files, and compares their raw content byte-by-byte against the first file.
-The logic is intentionally strict: if at least one file differs, it reports the mismatch and returns a non-OK status.
-
-In this project, each Slurm output file stores the final triple: \texttt{join\_count}, \texttt{checksum1}, \texttt{checksum2}.
-Therefore, identical files imply identical final join outputs across compared runs. In the collected data, all variants produced the same values, which confirms that optimization changes preserve functional correctness.
+% Correctness validation
+\section{Correctness Validation}
+Correctness is checked at two levels. For small inputs, each executable can run the naive \(O(N_RN_S)\) verifier and print \texttt{naive\_join\_count}, \texttt{naive\_checksum1} and \texttt{naive\_checksum2}. For benchmark-size inputs, \texttt{checker.cpp} scans the Slurm output files and compares \texttt{join\_count}, \texttt{checksum1} and \texttt{checksum2} for each executable and dataset type. The checker is outside the measured region, and the collected runs match across implementations for the same dataset.
 
 
+% Conclusions
 \section{Conclusions}
-The results show a clear progression:
-\begin{itemize}
-    \item parallelizing only partitioning is not sufficient (speedup capped around \(1.75\times\));
-    \item parallelizing join is the dominant improvement (around \(7.6\times\));
-    \item workload balancing improves robustness, but in this setup its standalone speedup is small because average work per thread is already similar;
-    \item locality-oriented structures (\texttt{par\_pj\_wb\_map}) deliver the best result (\(8.26\times\)).
-\end{itemize}
+The OpenMP implementations preserve the previous algorithm and make the scheduling tradeoffs clearer. On uniform data, loop, task and taskloop variants perform similarly once the join phase is parallelized; tasking does not provide a large advantage because partitions are already well balanced. On skewed data, workload-aware join ordering is the decisive change, especially for \texttt{skewed\_90\_5}. The strongest skew still exposes a limitation of partition-level parallelism: one hot partition cannot be split among multiple threads by the current local join design.
 
-So, for this workload, the main insights are that join-phase optimization dominates total performance, while partition scaling saturates earlier and sets a practical upper bound unless data movement costs are further reduced. Strong scaling is good up to about 16--32 threads for the best variants, then plateaus as shared machine resources saturate. The weak-scaling campaign is only moderate (sublinear speedup growth), which is consistent with machine-level bottlenecks becoming dominant at higher thread counts.
+Compared with the best C++ threaded result from Module 2, the best OpenMP result is close but slightly slower in the broad campaign. The main benefit of this module is therefore not a new absolute minimum, but a clearer understanding of which OpenMP constructs are sufficient: guided loop scheduling plus workload-aware dynamic join scheduling is the most robust choice for this implementation.
 
 \end{document}

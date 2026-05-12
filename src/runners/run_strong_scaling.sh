@@ -23,3 +23,5 @@ export OMP_NUM_THREADS=64
 export OMP_DISPLAY_ENV="${OMP_DISPLAY_ENV:-false}"
 
 srun ./strong_scaling
+
+cleanall_strong_scaling
