@@ -69,23 +69,12 @@ runner_args=(
     --partition-chunk "$PARTITION_CHUNK"
     --join-chunk "$JOIN_CHUNK"
     --partition-block-size "$PARTITION_BLOCK_SIZE"
+    --partition-task-blocks "$PARTITION_PARAM"
+    --join-task-partitions "$JOIN_PARAM"
+    --offset-task-partitions "$OFFSET_PARAM"
+    --partition-task-grain "$PARTITION_PARAM"
+    --join-task-grain "$JOIN_PARAM"
+    --offset-task-grain "$OFFSET_PARAM"
 )
-
-case "$EXECUTABLE_TARGET" in
-    hashjoin_omp_task|hashjoin_omp_task_wb)
-        runner_args+=(
-            --partition-task-blocks "$PARTITION_PARAM"
-            --join-task-partitions "$JOIN_PARAM"
-            --offset-task-partitions "$OFFSET_PARAM"
-        )
-        ;;
-    *)
-        runner_args+=(
-            --partition-task-grain "$PARTITION_PARAM"
-            --join-task-grain "$JOIN_PARAM"
-            --offset-task-grain "$OFFSET_PARAM"
-        )
-        ;;
-esac
 
 "${runner_args[@]}"
