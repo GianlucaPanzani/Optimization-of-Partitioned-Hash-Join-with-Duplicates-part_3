@@ -24,4 +24,4 @@ export OMP_DISPLAY_ENV="${OMP_DISPLAY_ENV:-false}"
 
 srun ./strong_scaling
 
-cleanall_strong_scaling
+make cleanall_strong_scaling

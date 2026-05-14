@@ -763,8 +763,7 @@ int main(int argc, char** argv) {
         {"time_sec", std::to_string(tot_time_sec)}
     };
 
-    //const std::string filepath = "results/" + std::filesystem::path(argv[0]).stem().string() + ".csv";
-    const std::string filepath = "results/hashjoin_omp_taskloop_full_grid.csv";
+    const std::string filepath = "results/" + std::filesystem::path(argv[0]).stem().string() + ".csv";
     append_to_csv(filepath, results_map);
 
     return 0;

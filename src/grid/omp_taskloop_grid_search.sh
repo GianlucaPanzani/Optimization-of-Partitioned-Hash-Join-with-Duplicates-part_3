@@ -21,14 +21,14 @@ OFFSET_TASKLOOP_GRAIN_VALUES=(1)
 
 # --- Reduced OMP combinations ---
 # OpenMP thread configurations
-#PARTITION_THREAD_VALUES=(64)
-#JOIN_THREAD_VALUES=(32)
+PARTITION_THREAD_VALUES=(64)
+JOIN_THREAD_VALUES=(32)
 # Block size used by the parallel partitioning implementation (for the block-based histogram/scatter phase)
 PARTITION_BLOCK_SIZE_VALUES=(32768)
 # Taskloop grains (partition grain measured in input blocks, join/offset grains measured in partitions)
-#PARTITION_TASKLOOP_GRAIN_VALUES=(2 4)
-#JOIN_TASKLOOP_GRAIN_VALUES=(4 8)
-#OFFSET_TASKLOOP_GRAIN_VALUES=(2)
+PARTITION_TASKLOOP_GRAIN_VALUES=(2 4)
+JOIN_TASKLOOP_GRAIN_VALUES=(4 8)
+OFFSET_TASKLOOP_GRAIN_VALUES=(2)
 
 # --- Unused parameters for the OMP taskloop version ---
 PARTITION_SCHEDULE_VALUES=(auto)

@@ -737,9 +737,9 @@ hashjoin_omp_loop.cpp:888:5: missed: statement clobbers memory: std::pair<const 
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/new_allocator.h:158:26: missed: statement clobbers memory: operator delete (_432, _434);
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/new_allocator.h:158:26: missed: statement clobbers memory: operator delete (_429, _431);
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/new_allocator.h:158:26: missed: statement clobbers memory: operator delete (_426, _428);
-hashjoin_omp_loop.cpp:889:64: missed: not vectorized: statement can throw an exception: std::filesystem::__cxx11::path::path<char*> (&D.109324, argv_135(D), 2);
-hashjoin_omp_loop.cpp:889:82: missed: not vectorized: statement can throw an exception: D.109325 = std::filesystem::__cxx11::path::stem (&D.109324); [return slot optimization]
-hashjoin_omp_loop.cpp:889:82: missed: splitting region at control altering definition _479 = std::__cxx11::basic_string<char>::insert (&D.109326, 0, "results/");
+hashjoin_omp_loop.cpp:890:64: missed: not vectorized: statement can throw an exception: std::filesystem::__cxx11::path::path<char*> (&D.109324, argv_135(D), 2);
+hashjoin_omp_loop.cpp:890:82: missed: not vectorized: statement can throw an exception: D.109325 = std::filesystem::__cxx11::path::stem (&D.109324); [return slot optimization]
+hashjoin_omp_loop.cpp:890:82: missed: splitting region at control altering definition _479 = std::__cxx11::basic_string<char>::insert (&D.109326, 0, "results/");
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/fs_path.h:1139:58: missed: not vectorized: statement can throw an exception: std::__cxx11::basic_string<char>::__ct_base .isra (&D.109326, _477, _478);
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/basic_string.h:3541:36: missed: not vectorized: statement can throw an exception: _479 = std::__cxx11::basic_string<char>::insert (&D.109326, 0, "results/");
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/basic_string.h:3541:36: missed: splitting region at dominance boundary bb351
@@ -753,15 +753,15 @@ hashjoin_omp_loop.cpp:748:5: missed: not vectorized: statement can throw an exce
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/new_allocator.h:158:26: missed: statement clobbers memory: operator delete (_574, _576);
 hashjoin_omp_loop.cpp:748:5: missed: not vectorized: statement can throw an exception: resx 162
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/basic_string.h:795:23: missed: splitting region at dominance boundary bb352
-hashjoin_omp_loop.cpp:889:82: missed: statement clobbers memory: std::filesystem::__cxx11::path::~path (&D.109325);
+hashjoin_omp_loop.cpp:890:82: missed: statement clobbers memory: std::filesystem::__cxx11::path::~path (&D.109325);
 hashjoin_omp_loop.cpp:748:5: missed: not vectorized: statement can throw an exception: resx 161
-hashjoin_omp_loop.cpp:889:82: missed: splitting region at dominance boundary bb364
+hashjoin_omp_loop.cpp:890:82: missed: splitting region at dominance boundary bb364
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/basic_string.h:3555:43: missed: statement clobbers memory: std::__cxx11::basic_string<char>::basic_string (&filepath, _480);
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/new_allocator.h:158:26: missed: statement clobbers memory: operator delete (_484, _486);
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/new_allocator.h:158:26: missed: statement clobbers memory: operator delete (_481, _483);
-hashjoin_omp_loop.cpp:889:82: missed: statement clobbers memory: std::filesystem::__cxx11::path::~path (&D.109325);
-hashjoin_omp_loop.cpp:889:64: missed: statement clobbers memory: std::filesystem::__cxx11::path::~path (&D.109324);
-hashjoin_omp_loop.cpp:890:18: missed: not vectorized: statement can throw an exception: append_to_csv (&filepath, &results_map);
+hashjoin_omp_loop.cpp:890:82: missed: statement clobbers memory: std::filesystem::__cxx11::path::~path (&D.109325);
+hashjoin_omp_loop.cpp:890:64: missed: statement clobbers memory: std::filesystem::__cxx11::path::~path (&D.109324);
+hashjoin_omp_loop.cpp:891:18: missed: not vectorized: statement can throw an exception: append_to_csv (&filepath, &results_map);
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/new_allocator.h:158:26: missed: statement clobbers memory: operator delete (_496, _498);
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/stl_tree.h:984:17: missed: statement clobbers memory: std::_Rb_tree<std::__cxx11::basic_string<char>, std::pair<const std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >, std::_Select1st<std::pair<const std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> > >, std::less<std::__cxx11::basic_string<char> >, std::allocator<std::pair<const std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> > > >::_M_erase.isra (_495);
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/new_allocator.h:158:26: missed: statement clobbers memory: operator delete (_491, _494);
@@ -773,10 +773,10 @@ hashjoin_omp_loop.cpp:243:8: missed: splitting region at dominance boundary bb51
 hashjoin_omp_loop.cpp:748:5: missed: not vectorized: statement can throw an exception: resx 172
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/basic_string.h:795:23: missed: splitting region at dominance boundary bb516
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/basic_string.h:795:23: missed: splitting region at dominance boundary bb522
-hashjoin_omp_loop.cpp:889:64: missed: statement clobbers memory: std::filesystem::__cxx11::path::~path (&D.109324);
+hashjoin_omp_loop.cpp:890:64: missed: statement clobbers memory: std::filesystem::__cxx11::path::~path (&D.109324);
 hashjoin_omp_loop.cpp:748:5: missed: not vectorized: statement can throw an exception: resx 160
-hashjoin_omp_loop.cpp:889:64: missed: splitting region at dominance boundary bb523
-hashjoin_omp_loop.cpp:889:64: missed: splitting region at dominance boundary bb309
+hashjoin_omp_loop.cpp:890:64: missed: splitting region at dominance boundary bb523
+hashjoin_omp_loop.cpp:890:64: missed: splitting region at dominance boundary bb309
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/stl_tree.h:984:17: missed: statement clobbers memory: std::_Rb_tree<std::__cxx11::basic_string<char>, std::pair<const std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >, std::_Select1st<std::pair<const std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> > >, std::less<std::__cxx11::basic_string<char> >, std::allocator<std::pair<const std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> > > >::_M_erase.isra (_580);
 hashjoin_omp_loop.cpp:748:5: missed: not vectorized: statement can throw an exception: resx 155
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/stl_map.h:312:7: missed: splitting region at dominance boundary bb413
@@ -841,15 +841,15 @@ hashjoin_omp_loop.cpp:748:5: missed: not vectorized: statement can throw an exce
 hashjoin_omp_loop.cpp:748:5: missed: not vectorized: statement can throw an exception: resx 78
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/basic_string.h:795:23: missed: splitting region at dominance boundary bb498
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/basic_string.h:795:23: missed: splitting region at dominance boundary bb230
-hashjoin_omp_loop.cpp:893:1: missed: statement clobbers memory: std::pair<const std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >::~pair (_329);
+hashjoin_omp_loop.cpp:894:1: missed: statement clobbers memory: std::pair<const std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >::~pair (_329);
 hashjoin_omp_loop.cpp:748:5: missed: not vectorized: statement can throw an exception: resx 76
-hashjoin_omp_loop.cpp:893:1: missed: splitting region at dominance boundary bb228
-hashjoin_omp_loop.cpp:893:1: missed: splitting region at dominance boundary bb226
-hashjoin_omp_loop.cpp:893:1: missed: splitting region at dominance boundary bb223
-hashjoin_omp_loop.cpp:893:1: missed: splitting region at dominance boundary bb217
-hashjoin_omp_loop.cpp:893:1: missed: splitting region at dominance boundary bb211
-hashjoin_omp_loop.cpp:893:1: missed: splitting region at dominance boundary bb557
-hashjoin_omp_loop.cpp:893:1: missed: splitting region at dominance boundary bb197
+hashjoin_omp_loop.cpp:894:1: missed: splitting region at dominance boundary bb228
+hashjoin_omp_loop.cpp:894:1: missed: splitting region at dominance boundary bb226
+hashjoin_omp_loop.cpp:894:1: missed: splitting region at dominance boundary bb223
+hashjoin_omp_loop.cpp:894:1: missed: splitting region at dominance boundary bb217
+hashjoin_omp_loop.cpp:894:1: missed: splitting region at dominance boundary bb211
+hashjoin_omp_loop.cpp:894:1: missed: splitting region at dominance boundary bb557
+hashjoin_omp_loop.cpp:894:1: missed: splitting region at dominance boundary bb197
 hashjoin_omp_loop.cpp:736:35: missed: not vectorized: vectorization is not profitable.
 hashjoin_omp_loop.cpp:738:22: missed: splitting region at dominance boundary bb191
 hashjoin_omp_loop.cpp:738:22: missed: splitting region at dominance boundary bb185
@@ -914,16 +914,16 @@ hashjoin_omp_loop.cpp:788:47: missed: not vectorized: statement can throw an exc
 hashjoin_omp_loop.cpp:790:5: missed: statement clobbers memory: __cxa_end_catch ();
 hashjoin_omp_loop.cpp:790:5: missed: splitting region at dominance boundary bb367
 hashjoin_omp_loop.cpp:790:5: missed: splitting region at dominance boundary bb392
-hashjoin_omp_loop.cpp:893:1: missed: statement clobbers memory: OmpConfig::~OmpConfig (&cfg);
-hashjoin_omp_loop.cpp:893:1: missed: splitting region at dominance boundary bb390
-hashjoin_omp_loop.cpp:893:1: missed: splitting region at dominance boundary bb395
-hashjoin_omp_loop.cpp:893:1: missed: splitting region at dominance boundary bb541
+hashjoin_omp_loop.cpp:894:1: missed: statement clobbers memory: OmpConfig::~OmpConfig (&cfg);
+hashjoin_omp_loop.cpp:894:1: missed: splitting region at dominance boundary bb390
+hashjoin_omp_loop.cpp:894:1: missed: splitting region at dominance boundary bb395
+hashjoin_omp_loop.cpp:894:1: missed: splitting region at dominance boundary bb541
 hashjoin_omp_loop.cpp:790:5: missed: statement clobbers memory: __cxa_end_catch ();
 hashjoin_omp_loop.cpp:748:5: missed: not vectorized: statement can throw an exception: resx 51
 hashjoin_omp_loop.cpp:790:5: missed: splitting region at dominance boundary bb375
-hashjoin_omp_loop.cpp:893:1: missed: statement clobbers memory: OmpConfig::~OmpConfig (&cfg);
+hashjoin_omp_loop.cpp:894:1: missed: statement clobbers memory: OmpConfig::~OmpConfig (&cfg);
 hashjoin_omp_loop.cpp:748:5: missed: not vectorized: statement can throw an exception: resx 49
-hashjoin_omp_loop.cpp:893:1: missed: splitting region at dominance boundary bb379
+hashjoin_omp_loop.cpp:894:1: missed: splitting region at dominance boundary bb379
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/new_allocator.h:158:26: missed: statement clobbers memory: operator delete (_511, _513);
 hashjoin_omp_loop.cpp:748:5: missed: not vectorized: statement can throw an exception: resx 38
 /opt/ohpc/pub/compiler/gcc/12.2.0/include/c++/12.2.0/bits/basic_string.h:795:23: missed: splitting region at dominance boundary bb380
