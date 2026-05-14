@@ -22,6 +22,8 @@ make -B weak_scaling
 export OMP_NUM_THREADS=32
 export OMP_DISPLAY_ENV="${OMP_DISPLAY_ENV:-false}"
 
+rm results/weak_scaling.csv
+
 srun ./weak_scaling
 
-make cleanall_weak_scaling
+rm weak_scaling

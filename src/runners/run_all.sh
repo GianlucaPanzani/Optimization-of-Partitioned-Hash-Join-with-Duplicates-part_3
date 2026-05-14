@@ -11,8 +11,6 @@
 #./benchmark.sh hashjoin_omp_taskloop grid/omp_taskloop_grid_search.sh 5
 #./benchmark.sh hashjoin_omp_taskloop_wb grid/omp_taskloop_grid_search.sh 5
 
-rm ../results/weak_scaling.csv
 ./run_weak_scaling.sh
-rm ../results/strong_scaling.csv
 ./run_strong_scaling.sh
 

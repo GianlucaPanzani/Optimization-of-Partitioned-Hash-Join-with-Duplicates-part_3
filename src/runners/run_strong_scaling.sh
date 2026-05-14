@@ -22,6 +22,8 @@ make -B strong_scaling
 export OMP_NUM_THREADS=64
 export OMP_DISPLAY_ENV="${OMP_DISPLAY_ENV:-false}"
 
+rm results/strong_scaling.csv
+
 srun ./strong_scaling
 
-make cleanall_strong_scaling
+rm strong_scaling
