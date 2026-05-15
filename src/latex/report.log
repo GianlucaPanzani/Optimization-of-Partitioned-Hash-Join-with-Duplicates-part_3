@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.12.28)  15 MAY 2026 17:59
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.12.28)  15 MAY 2026 18:32
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -364,22 +364,22 @@ Package pdftex.def Info: ../img/005_selected_best_phase_breakdown_50000000_5000
 
 
 [2]
-<../img/007_strong_scaling_speedup_50000000_50000000_1000000.png, id=108, 1148.
-29pt x 382.6295pt>
+<../img/007_strong_scaling_speedup_50000000_50000000_1000000.png, id=108, 1610.
+818pt x 382.6295pt>
 File: ../img/007_strong_scaling_speedup_50000000_50000000_1000000.png Graphic f
 ile (type png)
 <use ../img/007_strong_scaling_speedup_50000000_50000000_1000000.png>
 Package pdftex.def Info: ../img/007_strong_scaling_speedup_50000000_50000000_10
 00000.png  used on input line 106.
-(pdftex.def)             Requested size: 389.55266pt x 129.80038pt.
-
-
-[3 <../img/005_selected_best_phase_breakdown_50000000_50000000_1000000.png> <..
-/img/007_strong_scaling_speedup_50000000_50000000_1000000.png>]
+(pdftex.def)             Requested size: 389.55266pt x 92.52773pt.
 LaTeX Font Info:    External font `cmex10' loaded for size
 (Font)              <7> on input line 122.
 LaTeX Font Info:    External font `cmex10' loaded for size
 (Font)              <5> on input line 122.
+
+
+[3 <../img/005_selected_best_phase_breakdown_50000000_50000000_1000000.png> <..
+/img/007_strong_scaling_speedup_50000000_50000000_1000000.png>]
 <../img/004_selected_best_Speedup_vs_Sequential_version_50000000_50000000_10000
 00.png, id=117, 1661.407pt x 368.577pt>
 File: ../img/004_selected_best_Speedup_vs_Sequential_version_50000000_50000000_
@@ -393,42 +393,38 @@ _50000000_50000000_1000000.png  used on input line 140.
 
 [4 <../img/004_selected_best_Speedup_vs_Sequential_version_50000000_50000000_10
 00000.png>]
-<../img/013_weak_scalability_scaled_speedup_dedicated.png, id=131, 627.946pt x 
-367.774pt>
-File: ../img/013_weak_scalability_scaled_speedup_dedicated.png Graphic file (ty
-pe png)
-<use ../img/013_weak_scalability_scaled_speedup_dedicated.png>
-Package pdftex.def Info: ../img/013_weak_scalability_scaled_speedup_dedicated.p
-ng  used on input line 196.
-(pdftex.def)             Requested size: 335.19873pt x 196.31662pt.
-<../img/011_strong_scalability_speedup_dedicated.png, id=132, 627.946pt x 367.7
-74pt>
-File: ../img/011_strong_scalability_speedup_dedicated.png Graphic file (type pn
-g)
-<use ../img/011_strong_scalability_speedup_dedicated.png>
-Package pdftex.def Info: ../img/011_strong_scalability_speedup_dedicated.png  u
-sed on input line 208.
-(pdftex.def)             Requested size: 335.19873pt x 196.31662pt.
+<../img/013_weak_scalability_scaled_speedup_by_dataset.png, id=131, 543.631pt x
+ 349.305pt>
+File: ../img/013_weak_scalability_scaled_speedup_by_dataset.png Graphic file (t
+ype png)
+<use ../img/013_weak_scalability_scaled_speedup_by_dataset.png>
+Package pdftex.def Info: ../img/013_weak_scalability_scaled_speedup_by_dataset.
+png  used on input line 196.
+(pdftex.def)             Requested size: 335.19873pt x 215.37827pt.
+<../img/011_strong_scalability_speedup_by_dataset.png, id=132, 533.995pt x 349.
+305pt>
+File: ../img/011_strong_scalability_speedup_by_dataset.png Graphic file (type p
+ng)
+<use ../img/011_strong_scalability_speedup_by_dataset.png>
+Package pdftex.def Info: ../img/011_strong_scalability_speedup_by_dataset.png  
+used on input line 208.
+(pdftex.def)             Requested size: 335.19873pt x 219.27448pt.
 
 
-[5 <../img/013_weak_scalability_scaled_speedup_dedicated.png>]
+[5 <../img/013_weak_scalability_scaled_speedup_by_dataset.png>]
 
-[6 <../img/011_strong_scalability_speedup_dedicated.png>] (./report.aux)
+[6 <../img/011_strong_scalability_speedup_by_dataset.png>] (./report.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
-
-
-LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
-
 Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: 52E1F4B324D9E5BB7EF42BA54C84D8D3;1949.
  ) 
 Here is how much of TeX's memory you used:
  9253 strings out of 473190
- 145846 string characters out of 5715799
- 564034 words of memory out of 5000000
+ 145860 string characters out of 5715799
+ 564004 words of memory out of 5000000
  32383 multiletter control sequences out of 15000+600000
  564545 words of font info for 56 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
@@ -447,7 +443,7 @@ live/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/local/texli
 ve/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb></usr/local/texliv
 e/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt8.pfb></usr/local/texlive/
 2025/texmf-dist/fonts/type1/public/cm-super/sfrm1095.pfb>
-Output written on report.pdf (8 pages, 560918 bytes).
+Output written on report.pdf (8 pages, 555184 bytes).
 PDF statistics:
  216 PDF objects out of 1000 (max. 8388607)
  166 compressed objects within 2 object streams

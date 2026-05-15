@@ -182,18 +182,18 @@ Explicit tasks give the best required result on both skewed datasets in the curr
 
 % Scaling analysis
 \section{Scaling analysis}
-Strong and weak scalability are measured only with the selected workload-balanced loop implementation, using the best fixed parameters found in the reduced grid. These plots should therefore be read as scalability of the chosen OpenMP loop solution, not as another comparison among all implementations. The loop version is used because has the more balanced and expected behavior.
+Strong and weak scalability are measured only with the selected workload-balanced loop implementation, using the best fixed parameters found in the reduced grid. These plots should therefore be read as scalability of the chosen OpenMP loop solution, not as another comparison among all implementations. The loop version is used because it has the more balanced and expected behavior.
 
 Both scaling files fix \(P=256\), \texttt{seed=13}, \texttt{max\_key=1\,000\,000}, guided partition and join schedules, partition/join chunk size \(8\), and partition block size \(32768\). In \texttt{strong\_scaling.cpp}, \(N_R=N_S=50\,000\,000\) is also fixed, while the only non-fixed parameter is the thread count, using the same value for partition and join phases. In \texttt{weak\_scaling.cpp}, both \(N_R=N_S\) and the thread count vary together, again with the same thread count for partition and join phases; their concrete values are reported in the plots below.
 
 
 % Weak scalability
 \subsection{Weak scalability}
-Weak scaling depends strongly on the dataset distribution. The uniform case scales best overall: it reaches about \(1.79\times\) scaled speedup at 16 threads and remains at \(1.33\times\) at 32 threads. The \texttt{skewed\_90\_5} case is competitive up to 16 threads, but drops to about \(0.97\times\) at 32 threads. The strongest skew, \texttt{skewed\_90\_1}, degrades much earlier and reaches only about \(0.36\times\) at 32 threads, because increasing \(N\) also enlarges the hot partitions and their duplicate-key work.
+Weak scaling worsens as the skew becomes stronger. On uniform data, increasing \(N\) together with the number of threads is still useful: the scaled speedup reaches about \(3.17\times\) at 16 threads and remains close to \(3.02\times\) at 32 threads. With moderate skew, \texttt{skewed\_90\_5}, the curve is lower and peaks earlier, at about \(2.36\times\) with 8 threads, then stays near \(2.1\times\) at 16 and 32 threads. With the strongest skew, \texttt{skewed\_90\_1}, the 2-thread case is almost ideal, but the curve then decreases to about \(1.30\times\) at 32 threads, because increasing \(N\) also increases the hot partitions and duplicate-key work that cannot be spread as evenly.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.74\linewidth]{../img/013_weak_scalability_scaled_speedup_dedicated.png}
+    \includegraphics[width=0.74\linewidth]{../img/013_weak_scalability_scaled_speedup_by_dataset.png}
     \caption{Weak-scaling scaled speedup for uniform and skewed datasets.}
     \label{fig:weak-scaling}
 \end{figure}
@@ -201,11 +201,11 @@ Weak scaling depends strongly on the dataset distribution. The uniform case scal
 
 % Strong scalability
 \subsection{Strong scalability}
-Strong scaling also separates the datasets clearly. Uniform data benefits the most from extra threads and grows up to about \(6.67\times\) at 64 threads. The \texttt{skewed\_90\_5} dataset improves up to about \(5.34\times\) at 32 threads, then loses performance at 64 threads because the remaining hot-partition work does not scale enough to compensate for the extra overhead. The \texttt{skewed\_90\_1} dataset scales poorly across the whole range and reaches only about \(1.75\times\), showing that the strongest skew leaves too little independent work once a few hot partitions dominate the join.
+Strong scaling shows a different effect of skew because the input size is fixed and the baseline is the 1-thread execution of each dataset. Uniform data improves regularly up to about \(4.92\times\) at 32 threads and then saturates at 64 threads. The moderate-skew case, \texttt{skewed\_90\_5}, has a slower 1-thread baseline and still contains enough work to split across threads, so its relative speedup is higher, reaching about \(6.48\times\) at 64 threads. The strongest skew, \texttt{skewed\_90\_1}, is not monotonic: it reaches about \(3.13\times\) at 2 threads, then stays below \(3\times\) for the larger thread counts. This shows that, when only a few hot partitions dominate the join, adding threads gives limited benefit even with workload balancing.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.74\linewidth]{../img/011_strong_scalability_speedup_dedicated.png}
+    \includegraphics[width=0.74\linewidth]{../img/011_strong_scalability_speedup_by_dataset.png}
     \caption{Strong-scaling speedup for the dedicated workload-balanced OpenMP executable.}
     \label{fig:strong-scaling}
 \end{figure}
