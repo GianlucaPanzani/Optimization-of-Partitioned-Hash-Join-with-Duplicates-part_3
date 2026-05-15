@@ -772,6 +772,8 @@ int main(int argc, char** argv) {
     };
 
     const std::vector<WeakScalingCase> cases = {
+        {2500000, 1},
+        {5000000, 2},
         {10000000, 4},
         {20000000, 8},
         {40000000, 16},

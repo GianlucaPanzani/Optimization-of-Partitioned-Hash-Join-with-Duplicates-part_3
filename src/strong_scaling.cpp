@@ -776,7 +776,7 @@ int main(int argc, char** argv) {
         "skewed_90_5",
         "skewed_90_1"
     };
-    const std::vector<int> thread_values = {4, 8, 16, 32, 64};
+    const std::vector<int> thread_values = {1, 2, 4, 8, 16, 32, 64};
     const std::size_t repeat_count = 5;
     const std::size_t n_combs = dataset_type_names.size() * thread_values.size() * repeat_count;
 
