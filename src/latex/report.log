@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.12.28)  14 MAY 2026 19:40
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.12.28)  15 MAY 2026 11:15
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -380,19 +380,24 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 
 [3 <../img/005_selected_best_phase_breakdown_50000000_50000000_1000000.png> <..
 /img/007_strong_scaling_speedup_50000000_50000000_1000000.png>]
-<../img/004_selected_best_Speedup_vs_sequential_version_50000000_50000000_10000
+<../img/004_selected_best_Speedup_vs_Sequential_version_50000000_50000000_10000
 00.png, id=117, 1661.407pt x 368.577pt>
-File: ../img/004_selected_best_Speedup_vs_sequential_version_50000000_50000000_
+File: ../img/004_selected_best_Speedup_vs_Sequential_version_50000000_50000000_
 1000000.png Graphic file (type png)
-<use ../img/004_selected_best_Speedup_vs_sequential_version_50000000_50000000_1
+<use ../img/004_selected_best_Speedup_vs_Sequential_version_50000000_50000000_1
 000000.png>
-Package pdftex.def Info: ../img/004_selected_best_Speedup_vs_sequential_version
+Package pdftex.def Info: ../img/004_selected_best_Speedup_vs_Sequential_version
 _50000000_50000000_1000000.png  used on input line 142.
 (pdftex.def)             Requested size: 371.43698pt x 82.4032pt.
 
 
-[4 <../img/004_selected_best_Speedup_vs_sequential_version_50000000_50000000_10
+[4 <../img/004_selected_best_Speedup_vs_Sequential_version_50000000_50000000_10
 00000.png>]
+Overfull \hbox (2.5241pt too wide) in paragraph at lines 180--181
+\OT1/cmr/m/n/10.95 give the best re-quired re-sult on both skewed datasets in t
+he cur-rent av-er-aged cam-paign: \OT1/cmtt/m/n/10.95 omp[]task
+ []
+
 <../img/013_weak_scalability_scaled_speedup_dedicated.png, id=131, 627.946pt x 
 367.774pt>
 File: ../img/013_weak_scalability_scaled_speedup_dedicated.png Graphic file (ty
@@ -436,6 +441,10 @@ lability_efficiency_dedicated.png>] (./report.aux)
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
+
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
 Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: 52E1F4B324D9E5BB7EF42BA54C84D8D3;1949.
  ) 
@@ -446,7 +455,7 @@ Here is how much of TeX's memory you used:
  32397 multiletter control sequences out of 15000+600000
  564545 words of font info for 56 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,10n,79p,1037b,469s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,10n,79p,1039b,469s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb
 ></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb>
 </usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb><
@@ -461,7 +470,7 @@ live/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/local/texli
 ve/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb></usr/local/texliv
 e/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt8.pfb></usr/local/texlive/
 2025/texmf-dist/fonts/type1/public/cm-super/sfrm1095.pfb>
-Output written on report.pdf (8 pages, 667268 bytes).
+Output written on report.pdf (8 pages, 667156 bytes).
 PDF statistics:
  220 PDF objects out of 1000 (max. 8388607)
  166 compressed objects within 2 object streams
