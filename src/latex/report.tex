@@ -83,7 +83,6 @@ After partitioning, the join phase is naturally parallel because partition \(p\)
 The non-\texttt{\_wb} loop version expresses this with an OpenMP \texttt{for} loop over the partition ids and combines the final \texttt{join\_count}, \texttt{checksum1} and \texttt{checksum2} with an OpenMP \texttt{reduction}. The non-\texttt{\_wb} task versions instead create OpenMP tasks for groups of partition joins and each task writes its result into a private \texttt{partial} slot.
 
 The important distinction is between the non-\texttt{\_wb} and the \texttt{\_wb} executables. In the non-\texttt{\_wb} versions, the join work is submitted to OpenMP in the natural partition-id order \(0,\ldots,P-1\). This is simple and works well when the dataset is uniform, because partitions have similar sizes and each local join has roughly similar cost.
-
 With skewed datasets, however, some partitions contain many more records and duplicate matches. Then a raw partition-id order can create a tail effect: most threads finish their small partitions while some few threads remain busy on hot partitions. The \texttt{\_wb} variants address this by keeping the same local hash-join logic, but changing the work list given to OpenMP. Before the join starts, the work of each partition is estimated as
 \[
     |R_p| + |S_p|,
@@ -100,7 +99,7 @@ and a target amount of records per join thread is computed. Partitions are sorte
 
 % Results Analysis
 \section{Results Analysis}
-All results below are generated from \texttt{src/results/}. The best averaged sequential rows in the current campaign are \(3.363\) s for the uniform dataset, \(3.383\) s for \texttt{skewed\_90\_5}, and \(3.344\) s for \texttt{skewed\_90\_1}. The best Module 2 C++ threaded result available in \texttt{src/old\_results/} was \(0.507\) s for \texttt{hashjoin\_par\_pj\_wb\_map}; the best averaged broad-grid OpenMP result here is \(0.553\) s, so the final OpenMP implementation is close in absolute time but does not clearly improve over the previous C++ threaded best case. This covers the main Module 3 comparison: sequential baseline, OpenMP loop, OpenMP tasks, the extra taskloop experiment, uniform/skewed workloads, and the previous C++ threaded implementation.
+All results below can be found in the \texttt{statistics.ipynb} notebook whose analyzed data are picked from \texttt{src/results/*.csv}. The best Module 2 C++ threaded result was \(0.507\) s for \texttt{hashjoin\_par\_pj\_wb\_map}; the best averaged broad-grid OpenMP result here is \(0.553\) s, so the final OpenMP implementation is close in absolute time but does not clearly improve over the previous C++ threaded best case. This section covers the main Module 3 comparison: sequential baseline, OpenMP loop, OpenMP tasks, the extra taskloop experiment, uniform/skewed workloads, and the previous C++ threaded implementation.
 
 \begin{figure}[H]
     \centering
@@ -113,6 +112,9 @@ All results below are generated from \texttt{src/results/}. The best averaged se
 % Uniform dataset
 \subsection{Uniform dataset}
 On the uniform workload, all complete OpenMP implementations are close once both partition and join are parallelized. The best averaged time is obtained by \texttt{hashjoin\_omp\_task} with 64 partition threads and 32 join threads: \(0.553\) s, corresponding to \(6.08\times\) speedup over the current sequential baseline.
+
+The difference between the best loop, task and taskloop versions is small; this means that, for uniform partitions, OpenMP tasking does not add much by itself. The dominant gains come from parallelizing the join and from keeping the local hash table cache-friendly.
+Inside the required implementations, explicit tasks are slightly faster than loop scheduling on uniform data: \texttt{omp\_task} reaches \(0.553\) s against \(0.571\) s for \texttt{omp\_loop}. The extra taskloop variant remains very close to the best result and is also simpler to express than manual task creation, because OpenMP handles the task generation from the loop structure.
 
 \begin{table}[H]
     \centering
@@ -133,10 +135,6 @@ On the uniform workload, all complete OpenMP implementations are close once both
     \label{tab:uniform-best}
 \end{table}
 
-The difference between the best loop, task and taskloop versions is small; this means that, for uniform partitions, OpenMP tasking does not add much by itself. The dominant gains come from parallelizing the join and from keeping the local hash table cache-friendly.
-Inside the required implementations, explicit tasks are slightly faster than loop scheduling on uniform data: \texttt{omp\_task} reaches \(0.553\) s against \(0.571\) s for \texttt{omp\_loop}. The extra taskloop variant remains very close to the best result and is also simpler to express than manual task creation, because OpenMP handles the task generation from the loop structure.
-The \texttt{taskloop} rows are reported only for experimental comparison: the assignment-required comparison is between loop-level OpenMP and explicit tasks.
-
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.82\linewidth]{../img/004_selected_best_Speedup_vs_Sequential_version_50000000_50000000_1000000.png}
@@ -147,7 +145,9 @@ The \texttt{taskloop} rows are reported only for experimental comparison: the as
 
 % Skewed datasets
 \subsection{Skewed datasets}
-The skewed datasets change both load balance and the actual join workload. In the OpenMP skewed runs, the final match count rises from about \(2.50 \cdot 10^9\) on uniform data to \(4.06 \cdot 10^{10}\) on \texttt{skewed\_90\_5} and \(1.74 \cdot 10^{11}\) on \texttt{skewed\_90\_1}. Therefore the slowdown is not only scheduling overhead: the hot partitions also contain many more duplicate matches.
+The skewed datasets change both load balance and the actual join workload. In the OpenMP skewed runs, the final match count rises from about \(2.50 \cdot 10^9\) on uniform data to \(4.06 \cdot 10^{10}\) on \texttt{skewed\_90\_5} and \(1.74 \cdot 10^{11}\) on \texttt{skewed\_90\_1}.
+This happens because many records are concentrated into a small set of hot partitions and hot keys, increasing the probability that the same keys appear many times in both relations.
+Therefore the slowdown is not only scheduling overhead: the hot partitions also contain many more duplicate-key matches.
 
 \begin{table}[H]
     \centering
@@ -175,40 +175,38 @@ The skewed datasets change both load balance and the actual join workload. In th
     \label{tab:skewed-best}
 \end{table}
 
-The workload-balanced loop version is still useful under skew. For \texttt{skewed\_90\_5}, the loop version improves from \(1.323\) s to \(0.769\) s when workload balancing is enabled. For \texttt{skewed\_90\_1}, the same change improves from \(2.573\) s to \(1.670\) s. The strongest skew still remains slower because splitting the probe side of a hot partition helps load balance but also repeats the \(R_p\) build work for each subrange.
+The workload-balanced loop version has the higher improvement with skewness, but is anyway slower than the task version. For \texttt{skewed\_90\_5}, the loop version improves from \(1.323\) s to \(0.769\) s when workload balancing is enabled. For \texttt{skewed\_90\_1}, the same change improves from \(2.573\) s to \(1.670\) s. The strongest skew still remains slower because splitting the probe side of a hot partition helps load balance but also repeats the \(R_p\) build work for each subrange.
 
-The comparison between the required OpenMP families changes with skew. Explicit tasks give the best required result on both skewed datasets in the current averaged campaign: \texttt{omp\_task} reaches \(0.636\) s on \texttt{skewed\_90\_5}, while \texttt{omp\_task\_wb} reaches \(1.501\) s on \texttt{skewed\_90\_1}. The extra taskloop implementation remains useful experimentally, but its workload-balanced version is mixed in these runs.
+Explicit tasks give the best required result on both skewed datasets in the current averaged campaign: \texttt{omp\_task} reaches \(0.636\) s on \texttt{skewed\_90\_5}, while \texttt{omp\_task\_wb} reaches \(1.501\) s on \texttt{skewed\_90\_1}. The extra taskloop implementation remains useful experimentally, but its workload-balanced version is mixed in these runs.
 
 
 % Scaling analysis
 \section{Scaling analysis}
-Strong and weak scalability are measured only with the selected workload-balanced loop implementation, using fixed best parameters from the reduced grid. These plots should therefore be read as scalability of the chosen OpenMP loop solution, not as another comparison among loop, task and taskloop implementations. The loop version is used because it is the selected required implementation for the fixed-parameter scaling drivers; the taskloop version is excluded because it is only an additional experimental comparison.
+Strong and weak scalability are measured only with the selected workload-balanced loop implementation, using the best fixed parameters found in the reduced grid. These plots should therefore be read as scalability of the chosen OpenMP loop solution, not as another comparison among all implementations. The loop version is used because has the more balanced and expected behavior.
 
-The \texttt{strong\_scaling.cpp} and \texttt{weak\_scaling.cpp} files are dedicated scaling drivers. Both keep the same algorithm and the partition-level workload-ordered join scheduling used by the selected loop driver: guided partition scheduling, workload-ordered dynamic join scheduling, and fixed block/chunk parameters selected from the reduced grid. The strong-scaling driver fixes \(N_R=N_S=50\,000\,000\) and varies the thread count. The weak-scaling driver increases the input from 10M to 80M records per relation while increasing the thread count from 4 to 32.
+Both scaling files fix \(P=256\), \texttt{seed=13}, \texttt{max\_key=1\,000\,000}, guided partition and join schedules, partition/join chunk size \(8\), and partition block size \(32768\). In \texttt{strong\_scaling.cpp}, \(N_R=N_S=50\,000\,000\) is also fixed, while the only non-fixed parameter is the thread count, using the same value for partition and join phases. In \texttt{weak\_scaling.cpp}, both \(N_R=N_S\) and the thread count vary together, again with the same thread count for partition and join phases; their concrete values are reported in the plots below.
 
 
 % Weak scalability
 \subsection{Weak scalability}
-Weak scaling is moderate. Uniform data keeps the best scaled speedup at 32 threads, reaching about \(1.33\times\) relative to the 4-thread base point, but efficiency still drops to about \(0.17\). The \texttt{skewed\_90\_1} curve is much worse and reaches only \(0.36\times\) scaled speedup at 32 threads, because the enlarged hot partitions increase both imbalance and duplicate-match work.
+Weak scaling depends strongly on the dataset distribution. The uniform case scales best overall: it reaches about \(1.79\times\) scaled speedup at 16 threads and remains at \(1.33\times\) at 32 threads. The \texttt{skewed\_90\_5} case is competitive up to 16 threads, but drops to about \(0.97\times\) at 32 threads. The strongest skew, \texttt{skewed\_90\_1}, degrades much earlier and reaches only about \(0.36\times\) at 32 threads, because increasing \(N\) also enlarges the hot partitions and their duplicate-key work.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.48\linewidth]{../img/013_weak_scalability_scaled_speedup_dedicated.png}\hfill
-    \includegraphics[width=0.48\linewidth]{../img/014_weak_scalability_efficiency_dedicated.png}
-    \caption{Weak-scaling scaled speedup and efficiency for uniform and skewed datasets.}
+    \includegraphics[width=0.74\linewidth]{../img/013_weak_scalability_scaled_speedup_dedicated.png}
+    \caption{Weak-scaling scaled speedup for uniform and skewed datasets.}
     \label{fig:weak-scaling}
 \end{figure}
 
 
 % Strong scalability
 \subsection{Strong scalability}
-On the uniform dataset, strong-scaling speedup grows up to about \(6.67\times\) at 64 threads. The \texttt{skewed\_90\_5} dataset peaks around \(5.34\times\) at 32 threads and then decreases at 64 threads, while \texttt{skewed\_90\_1} scales poorly and reaches only about \(1.75\times\) in the averaged data. This confirms that, for these dedicated scaling drivers, the effective granularity is still the partition: if one hot partition dominates, adding more threads cannot split that single local join.
+Strong scaling also separates the datasets clearly. Uniform data benefits the most from extra threads and grows up to about \(6.67\times\) at 64 threads. The \texttt{skewed\_90\_5} dataset improves up to about \(5.34\times\) at 32 threads, then loses performance at 64 threads because the remaining hot-partition work does not scale enough to compensate for the extra overhead. The \texttt{skewed\_90\_1} dataset scales poorly across the whole range and reaches only about \(1.75\times\), showing that the strongest skew leaves too little independent work once a few hot partitions dominate the join.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.48\linewidth]{../img/011_strong_scalability_speedup_dedicated.png}\hfill
-    \includegraphics[width=0.48\linewidth]{../img/012_strong_scalability_efficiency_dedicated.png}
-    \caption{Strong-scaling speedup and efficiency for the dedicated workload-balanced OpenMP executable.}
+    \includegraphics[width=0.74\linewidth]{../img/011_strong_scalability_speedup_dedicated.png}
+    \caption{Strong-scaling speedup for the dedicated workload-balanced OpenMP executable.}
     \label{fig:strong-scaling}
 \end{figure}
 

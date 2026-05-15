@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.12.28)  15 MAY 2026 11:15
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.12.28)  15 MAY 2026 17:59
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -359,7 +359,7 @@ File: ../img/005_selected_best_phase_breakdown_50000000_50000000_1000000.png Gr
 aphic file (type png)
 <use ../img/005_selected_best_phase_breakdown_50000000_50000000_1000000.png>
 Package pdftex.def Info: ../img/005_selected_best_phase_breakdown_50000000_5000
-0000_1000000.png  used on input line 95.
+0000_1000000.png  used on input line 94.
 (pdftex.def)             Requested size: 371.43698pt x 172.64053pt.
 
 
@@ -370,16 +370,16 @@ File: ../img/007_strong_scaling_speedup_50000000_50000000_1000000.png Graphic f
 ile (type png)
 <use ../img/007_strong_scaling_speedup_50000000_50000000_1000000.png>
 Package pdftex.def Info: ../img/007_strong_scaling_speedup_50000000_50000000_10
-00000.png  used on input line 107.
+00000.png  used on input line 106.
 (pdftex.def)             Requested size: 389.55266pt x 129.80038pt.
-LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <7> on input line 120.
-LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <5> on input line 120.
 
 
 [3 <../img/005_selected_best_phase_breakdown_50000000_50000000_1000000.png> <..
 /img/007_strong_scaling_speedup_50000000_50000000_1000000.png>]
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <7> on input line 122.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <5> on input line 122.
 <../img/004_selected_best_Speedup_vs_Sequential_version_50000000_50000000_10000
 00.png, id=117, 1661.407pt x 368.577pt>
 File: ../img/004_selected_best_Speedup_vs_Sequential_version_50000000_50000000_
@@ -387,17 +387,12 @@ File: ../img/004_selected_best_Speedup_vs_Sequential_version_50000000_50000000_
 <use ../img/004_selected_best_Speedup_vs_Sequential_version_50000000_50000000_1
 000000.png>
 Package pdftex.def Info: ../img/004_selected_best_Speedup_vs_Sequential_version
-_50000000_50000000_1000000.png  used on input line 142.
+_50000000_50000000_1000000.png  used on input line 140.
 (pdftex.def)             Requested size: 371.43698pt x 82.4032pt.
 
 
 [4 <../img/004_selected_best_Speedup_vs_Sequential_version_50000000_50000000_10
 00000.png>]
-Overfull \hbox (2.5241pt too wide) in paragraph at lines 180--181
-\OT1/cmr/m/n/10.95 give the best re-quired re-sult on both skewed datasets in t
-he cur-rent av-er-aged cam-paign: \OT1/cmtt/m/n/10.95 omp[]task
- []
-
 <../img/013_weak_scalability_scaled_speedup_dedicated.png, id=131, 627.946pt x 
 367.774pt>
 File: ../img/013_weak_scalability_scaled_speedup_dedicated.png Graphic file (ty
@@ -405,38 +400,20 @@ pe png)
 <use ../img/013_weak_scalability_scaled_speedup_dedicated.png>
 Package pdftex.def Info: ../img/013_weak_scalability_scaled_speedup_dedicated.p
 ng  used on input line 196.
-(pdftex.def)             Requested size: 217.42265pt x 127.33672pt.
-<../img/014_weak_scalability_efficiency_dedicated.png, id=132, 627.946pt x 367.
-774pt>
-File: ../img/014_weak_scalability_efficiency_dedicated.png Graphic file (type p
-ng)
-<use ../img/014_weak_scalability_efficiency_dedicated.png>
-Package pdftex.def Info: ../img/014_weak_scalability_efficiency_dedicated.png  
-used on input line 197.
-(pdftex.def)             Requested size: 217.42265pt x 127.33672pt.
-<../img/011_strong_scalability_speedup_dedicated.png, id=133, 627.946pt x 367.7
+(pdftex.def)             Requested size: 335.19873pt x 196.31662pt.
+<../img/011_strong_scalability_speedup_dedicated.png, id=132, 627.946pt x 367.7
 74pt>
 File: ../img/011_strong_scalability_speedup_dedicated.png Graphic file (type pn
 g)
 <use ../img/011_strong_scalability_speedup_dedicated.png>
 Package pdftex.def Info: ../img/011_strong_scalability_speedup_dedicated.png  u
-sed on input line 209.
-(pdftex.def)             Requested size: 217.42265pt x 127.33672pt.
-<../img/012_strong_scalability_efficiency_dedicated.png, id=134, 627.946pt x 36
-7.774pt>
-File: ../img/012_strong_scalability_efficiency_dedicated.png Graphic file (type
- png)
-<use ../img/012_strong_scalability_efficiency_dedicated.png>
-Package pdftex.def Info: ../img/012_strong_scalability_efficiency_dedicated.png
-  used on input line 210.
-(pdftex.def)             Requested size: 217.42265pt x 127.33672pt.
+sed on input line 208.
+(pdftex.def)             Requested size: 335.19873pt x 196.31662pt.
 
 
-[5 <../img/013_weak_scalability_scaled_speedup_dedicated.png> <../img/014_weak_
-scalability_efficiency_dedicated.png>]
+[5 <../img/013_weak_scalability_scaled_speedup_dedicated.png>]
 
-[6 <../img/011_strong_scalability_speedup_dedicated.png> <../img/012_strong_sca
-lability_efficiency_dedicated.png>] (./report.aux)
+[6 <../img/011_strong_scalability_speedup_dedicated.png>] (./report.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
@@ -449,10 +426,10 @@ Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: 52E1F4B324D9E5BB7EF42BA54C84D8D3;1949.
  ) 
 Here is how much of TeX's memory you used:
- 9267 strings out of 473190
- 146684 string characters out of 5715799
- 564013 words of memory out of 5000000
- 32397 multiletter control sequences out of 15000+600000
+ 9253 strings out of 473190
+ 145846 string characters out of 5715799
+ 564034 words of memory out of 5000000
+ 32383 multiletter control sequences out of 15000+600000
  564545 words of font info for 56 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  75i,10n,79p,1039b,469s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -470,10 +447,10 @@ live/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/local/texli
 ve/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb></usr/local/texliv
 e/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt8.pfb></usr/local/texlive/
 2025/texmf-dist/fonts/type1/public/cm-super/sfrm1095.pfb>
-Output written on report.pdf (8 pages, 667156 bytes).
+Output written on report.pdf (8 pages, 560918 bytes).
 PDF statistics:
- 220 PDF objects out of 1000 (max. 8388607)
+ 216 PDF objects out of 1000 (max. 8388607)
  166 compressed objects within 2 object streams
  32 named destinations out of 1000 (max. 500000)
- 156 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 146 words of extra memory for PDF output out of 10000 (max. 10000000)
 
