@@ -900,6 +900,7 @@ int main(int argc, char** argv) {
     const JoinResult result = partitioned_hash_join(R, S, P, cfg);
     double t1 = get_time();
     const double tot_time_sec = t1 - t0;
+    bool verified = false;
     
     // Resulted output
     std::cout << "executable=" << std::filesystem::path(argv[0]).stem().string() << "\n";
@@ -911,9 +912,17 @@ int main(int argc, char** argv) {
     //Tiny debug check, only for very small datasets
     if (NR <= 500 && NS <= 500) {
         const JoinResult naive = naive_join_verifier(R, S);
+        verified = naive.join_count == result.join_count &&
+                   naive.checksum1 == result.checksum1 &&
+                   naive.checksum2 == result.checksum2;
         std::cout << "naive_join_count=" << naive.join_count << "\n";
         std::cout << "naive_checksum1=" << naive.checksum1 << "\n";
         std::cout << "naive_checksum2=" << naive.checksum2 << "\n";
+        std::cout << "verified=" << (verified ? "true" : "false") << "\n";
+        if (!verified) {
+            std::cerr << "Error: naive verifier mismatch.\n";
+            return 1;
+        }
     }
 
     // Append results to csv file
@@ -925,6 +934,7 @@ int main(int argc, char** argv) {
         {"checksum1", std::to_string(result.checksum1)},
         {"checksum2", std::to_string(result.checksum2)},
         {"join_count", std::to_string(result.join_count)},
+        {"verified", verified ? "true" : "false"},
         {"dataset_type", dataset_cfg.type},
         {"join_throughput", std::to_string(join_throughput)},
         {"total_throughput", std::to_string(total_throughput)},

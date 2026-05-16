@@ -182,7 +182,7 @@ Explicit tasks give the best required result on both skewed datasets in the curr
 
 % Scaling analysis
 \section{Scaling analysis}
-Strong and weak scalability are measured only with the selected workload-balanced loop implementation, using the best fixed parameters found in the reduced grid. These plots should therefore be read as scalability of the chosen OpenMP loop solution, not as another comparison among all implementations. The loop version is used because it has the more balanced and expected behavior.
+Strong and weak scalability are measured only with the selected workload-balanced loop implementation, using the best fixed parameters found in the reduced grid. The loop version is used because it has the more balanced and expected behavior.
 
 Both scaling files fix \(P=256\), \texttt{seed=13}, \texttt{max\_key=1\,000\,000}, guided partition and join schedules, partition/join chunk size \(8\), and partition block size \(32768\). In \texttt{strong\_scaling.cpp}, \(N_R=N_S=50\,000\,000\) is also fixed, while the only non-fixed parameter is the thread count, using the same value for partition and join phases. In \texttt{weak\_scaling.cpp}, both \(N_R=N_S\) and the thread count vary together, again with the same thread count for partition and join phases; their concrete values are reported in the plots below.
 
@@ -213,12 +213,15 @@ Strong scaling shows a different effect of skew because the input size is fixed 
 
 % Correctness validation
 \section{Correctness Validation}
-Correctness is checked at two levels. For small inputs, each executable can run the naive \(O(N_RN_S)\) verifier and print \texttt{naive\_join\_count}, \texttt{naive\_checksum1} and \texttt{naive\_checksum2}. For benchmark-size inputs, \texttt{checker.cpp} scans the Slurm output files and compares \texttt{join\_count}, \texttt{checksum1} and \texttt{checksum2} for each executable and dataset type. In the current CSVs the uniform runs match across implementations, while the skewed datasets show two checksum groups because the sequential rows keep the uniform checksum; those sequential skewed rows should be regenerated before treating the skewed checker output as a full cross-implementation validation.
+Correctness is checked at two levels. For small inputs, \(N_R \leq 500\) and \(N_S \leq 500\), each executable runs the naive \(O(N_RN_S)\) verifier and compares its \texttt{join\_count}, \texttt{checksum1} and \texttt{checksum2} with the optimized result. If the comparison succeeds, the executable prints and records \texttt{verified=true}; if it fails, it prints \texttt{verified=false} and exits with an error. The checker therefore treats \texttt{verified=true} outputs as already validated by the exact naive oracle.
 
+For benchmark-size inputs, where the naive verifier is too expensive, \texttt{checker.cpp} scans the Slurm output files and compares \texttt{join\_count}, \texttt{checksum1} and \texttt{checksum2} for each executable and dataset type.
 
 % Conclusions
 \section{Conclusions}
 The OpenMP implementations preserve the previous algorithm and make the scheduling tradeoffs clearer. On uniform data, loop, task and taskloop variants perform similarly once the join phase is parallelized; tasking does not provide a large advantage because partitions are already well balanced. On skewed data, workload-aware join decomposition is the decisive change for the loop family, while explicit tasks give the best required results in the current averaged campaign. The strongest skew still exposes a limitation: splitting a hot partition's probe range improves balance, but the repeated private build phase can become expensive.
+
+The scalability results confirm the same trend: uniform data scales more regularly, moderate skew can still exploit extra threads, while the strongest skew quickly becomes limited by hot partitions and duplicate-key work.
 
 Compared with the best C++ threaded result from Module 2, the best OpenMP result is close but slightly slower in the broad campaign. The main benefit of this module is therefore not a new absolute minimum, but a clearer understanding of which OpenMP constructs are sufficient and how join-work decomposition affects uniform and skewed workloads.
 

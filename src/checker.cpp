@@ -27,6 +27,8 @@ struct ResultOutput {
     std::string join_count;
     std::string checksum1;
     std::string checksum2;
+    bool has_verified_field = false;
+    bool verified = false;
 };
 
 static std::map<std::string, std::string> parse_key_values(const std::string& content) {
@@ -59,6 +61,7 @@ static std::optional<ResultOutput> result_from_content(const std::string& conten
     const auto join_count = values.find("join_count");
     const auto checksum1 = values.find("checksum1");
     const auto checksum2 = values.find("checksum2");
+    const auto verified = values.find("verified");
 
     const bool has_dataset_type = dataset_type_dash != values.end() || dataset_type_underscore != values.end();
     if (executable == values.end() || !has_dataset_type ||
@@ -72,6 +75,8 @@ static std::optional<ResultOutput> result_from_content(const std::string& conten
         join_count->second,
         checksum1->second,
         checksum2->second,
+        verified != values.end(),
+        verified != values.end() && (verified->second == "true" || verified->second == "1"),
     };
 }
 
@@ -127,6 +132,10 @@ int main(int argc, char** argv) {
             std::cerr << "[checker] missing executable/dataset-type/checksum output in: " << file.filename().string() << '\n';
             return 2;
         }
+        if (result->has_verified_field && !result->verified) {
+            std::cerr << "[checker] naive verification failed in: " << file.filename().string() << '\n';
+            return 1;
+        }
 
         const std::string group_key = result->executable + " | " + result->dataset_type;
         files_by_dataset_type[group_key].push_back(OutputFile{file, *result});
@@ -135,11 +144,30 @@ int main(int argc, char** argv) {
     bool all_equal = true;
 
     for (const auto& [group_key, dataset_files] : files_by_dataset_type) {
-        const auto& reference = dataset_files.front();
+        std::vector<OutputFile> unchecked_files;
+        std::size_t verified_count = 0;
+        for (const auto& file : dataset_files) {
+            if (file.result.verified) {
+                ++verified_count;
+            } else {
+                unchecked_files.push_back(file);
+            }
+        }
+
+        if (unchecked_files.empty()) {
+            const auto& reference = dataset_files.front();
+            std::cout << "[checker] OK --> executable=" << reference.result.executable
+                      << " dataset-type=" << reference.result.dataset_type
+                      << " all " << dataset_files.size()
+                      << " output files were already naive-verified\n";
+            continue;
+        }
+
+        const auto& reference = unchecked_files.front();
         bool dataset_equal = true;
 
-        for (std::size_t i = 1; i < dataset_files.size(); ++i) {
-            const auto& current = dataset_files[i];
+        for (std::size_t i = 1; i < unchecked_files.size(); ++i) {
+            const auto& current = unchecked_files[i];
             if (current.result.join_count != reference.result.join_count ||
                 current.result.checksum1 != reference.result.checksum1 ||
                 current.result.checksum2 != reference.result.checksum2) {
@@ -163,8 +191,12 @@ int main(int argc, char** argv) {
         } else {
             std::cout << "[checker] OK --> executable=" << reference.result.executable
                       << " dataset-type=" << reference.result.dataset_type
-                      << " all " << dataset_files.size()
-                      << " output files have identical checksums\n";
+                      << " all " << unchecked_files.size()
+                      << " unchecked output files have identical checksums";
+            if (verified_count > 0) {
+                std::cout << " and " << verified_count << " output files were already naive-verified";
+            }
+            std::cout << "\n";
         }
     }
 
