@@ -62,7 +62,7 @@ The parameters of the final grids were not chosen directly. Initially I created 
 
 The reduced grid used for the final results keeps the most stable choices found by those statistics files: guided scheduling for loop variants, explicit task grains in the range 2--4 for the task variants, taskloop grains in the range 2--8 for the experimental taskloop variants, 32 join threads for each family, and 32 or 64 partition threads.
 
-Three datasets are measured in the OpenMP variants. The uniform dataset is the same pseudo-random generation scheme used in the previous module. The skewed datasets are generated with the format \texttt{skewed\_R\_H}: \(R\%\) of records are sampled from keys that map to the first \(H\%\) of partitions. In the final grids I used \texttt{skewed\_90\_5} and \texttt{skewed\_90\_1}, which concentrate 90\% of the records respectively into about 13 and 3 hot partitions. The sequential executable accepts the same dataset labels for the CSV schema, but it still generates the uniform input; therefore the skewed-workload analysis is based on the OpenMP rows and the dedicated scaling executables.
+Three datasets are measured. The uniform dataset is the same pseudo-random generation scheme used in the previous module. The skewed datasets are generated with the format \texttt{skewed\_R\_H}: \(R\%\) of records are sampled from keys that map to the first \(H\%\) of partitions. The final grids use \texttt{skewed\_90\_5} and \texttt{skewed\_90\_1}, which concentrate 90\% of the records respectively into about 13 and 3 hot partitions. The sequential executable uses the same generation rule, so the skewed speedups are now computed against a sequential baseline with the same dataset type.
 
 
 % Parallelization Strategy
@@ -123,7 +123,7 @@ Inside the required implementations, explicit tasks are slightly faster than loo
         \toprule
         Variant & \(T_{part}\) & \(T_{join}\) & Best time [s] & Speedup \\
         \midrule
-        \texttt{omp\_loop} & 32 & 32 & 0.571 & \(5.88\times\) \\
+        \texttt{omp\_loop} & 32 & 32 & 0.571 & \(5.89\times\) \\
         \texttt{omp\_loop\_wb} & 32 & 32 & 0.567 & \(5.93\times\) \\
         \texttt{omp\_task} & 64 & 32 & 0.553 & \(6.08\times\) \\
         \texttt{omp\_task\_wb} & 64 & 32 & 0.558 & \(6.03\times\) \\
@@ -138,14 +138,14 @@ Inside the required implementations, explicit tasks are slightly faster than loo
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.82\linewidth]{../img/004_selected_best_Speedup_vs_Sequential_version_50000000_50000000_1000000.png}
-    \caption{Best ratio against the sequential CSV baseline for the current OpenMP campaign.}
+    \caption{Best speedup against the sequential baseline for the current OpenMP campaign.}
     \label{fig:selected-best}
 \end{figure}
 
 
 % Skewed datasets
 \subsection{Skewed datasets}
-The skewed datasets change both load balance and the actual join workload. In the OpenMP skewed runs, the final match count rises from about \(2.50 \cdot 10^9\) on uniform data to \(4.06 \cdot 10^{10}\) on \texttt{skewed\_90\_5} and \(1.74 \cdot 10^{11}\) on \texttt{skewed\_90\_1}.
+The skewed datasets change both load balance and the actual join workload. In the skewed runs, the final match count rises from about \(2.50 \cdot 10^9\) on uniform data to \(4.06 \cdot 10^{10}\) on \texttt{skewed\_90\_5} and \(1.74 \cdot 10^{11}\) on \texttt{skewed\_90\_1}.
 This happens because many records are concentrated into a small set of hot partitions and hot keys, increasing the probability that the same keys appear many times in both relations.
 Therefore the slowdown is not only scheduling overhead: the hot partitions also contain many more duplicate-key matches.
 
@@ -154,24 +154,24 @@ Therefore the slowdown is not only scheduling overhead: the hot partitions also 
     \scriptsize
     \begin{tabular}{llrrrrr}
         \toprule
-        Dataset & Variant & \(T_{part}\) & \(T_{join}\) & Best time [s] & Join time [s] & Time ratio \\
+        Dataset & Variant & \(T_{part}\) & \(T_{join}\) & Best time [s] & Join time [s] & Speedup \\
         \midrule
-        \texttt{skewed\_90\_5} & \texttt{omp\_loop} & 32 & 32 & 1.323 & 0.966 & \(2.56\times\) \\
-        \texttt{skewed\_90\_5} & \texttt{omp\_loop\_wb} & 32 & 32 & 0.769 & 0.413 & \(4.40\times\) \\
-        \texttt{skewed\_90\_5} & \texttt{omp\_task} & 64 & 32 & 0.636 & 0.286 & \(5.32\times\) \\
-        \texttt{skewed\_90\_5} & \texttt{omp\_task\_wb} & 64 & 32 & 0.710 & 0.362 & \(4.77\times\) \\
-        \texttt{skewed\_90\_5} & \texttt{omp\_taskloop} & 64 & 32 & 0.871 & 0.527 & \(3.88\times\) \\
-        \texttt{skewed\_90\_5} & \texttt{omp\_taskloop\_wb} & 64 & 32 & 0.839 & 0.497 & \(4.03\times\) \\
+        \texttt{skewed\_90\_5} & \texttt{omp\_loop} & 32 & 32 & 1.323 & 0.966 & \(2.12\times\) \\
+        \texttt{skewed\_90\_5} & \texttt{omp\_loop\_wb} & 32 & 32 & 0.769 & 0.413 & \(3.65\times\) \\
+        \texttt{skewed\_90\_5} & \texttt{omp\_task} & 64 & 32 & 0.636 & 0.286 & \(4.41\times\) \\
+        \texttt{skewed\_90\_5} & \texttt{omp\_task\_wb} & 64 & 32 & 0.710 & 0.362 & \(3.95\times\) \\
+        \texttt{skewed\_90\_5} & \texttt{omp\_taskloop} & 64 & 32 & 0.871 & 0.527 & \(3.22\times\) \\
+        \texttt{skewed\_90\_5} & \texttt{omp\_taskloop\_wb} & 64 & 32 & 0.839 & 0.497 & \(3.34\times\) \\
         \midrule
-        \texttt{skewed\_90\_1} & \texttt{omp\_loop} & 32 & 32 & 2.573 & 2.236 & \(1.30\times\) \\
-        \texttt{skewed\_90\_1} & \texttt{omp\_loop\_wb} & 32 & 32 & 1.670 & 1.334 & \(2.00\times\) \\
-        \texttt{skewed\_90\_1} & \texttt{omp\_task} & 64 & 32 & 1.856 & 1.521 & \(1.80\times\) \\
-        \texttt{skewed\_90\_1} & \texttt{omp\_task\_wb} & 64 & 32 & 1.501 & 1.170 & \(2.23\times\) \\
-        \texttt{skewed\_90\_1} & \texttt{omp\_taskloop} & 64 & 32 & 2.561 & 2.234 & \(1.31\times\) \\
-        \texttt{skewed\_90\_1} & \texttt{omp\_taskloop\_wb} & 64 & 32 & 2.912 & 2.586 & \(1.15\times\) \\
+        \texttt{skewed\_90\_1} & \texttt{omp\_loop} & 32 & 32 & 2.573 & 2.236 & \(1.22\times\) \\
+        \texttt{skewed\_90\_1} & \texttt{omp\_loop\_wb} & 32 & 32 & 1.670 & 1.334 & \(1.87\times\) \\
+        \texttt{skewed\_90\_1} & \texttt{omp\_task} & 64 & 32 & 1.856 & 1.521 & \(1.69\times\) \\
+        \texttt{skewed\_90\_1} & \texttt{omp\_task\_wb} & 64 & 32 & 1.501 & 1.170 & \(2.08\times\) \\
+        \texttt{skewed\_90\_1} & \texttt{omp\_taskloop} & 64 & 32 & 2.561 & 2.234 & \(1.22\times\) \\
+        \texttt{skewed\_90\_1} & \texttt{omp\_taskloop\_wb} & 64 & 32 & 2.912 & 2.586 & \(1.07\times\) \\
         \bottomrule
     \end{tabular}
-    \caption{Best averaged skewed-dataset result for each OpenMP executable. The last column is the ratio against the sequential row with the same dataset label; in the current code that sequential row is only a labeled uniform baseline.}
+    \caption{Best averaged skewed-dataset result for each OpenMP executable, using the sequential row with the same dataset label as baseline.}
     \label{tab:skewed-best}
 \end{table}
 
@@ -191,23 +191,25 @@ Both scaling files fix \(P=256\), \texttt{seed=13}, \texttt{max\_key=1\,000\,000
 \subsection{Weak scalability}
 Weak scaling worsens as the skew becomes stronger. On uniform data, increasing \(N\) together with the number of threads is still useful: the scaled speedup reaches about \(3.17\times\) at 16 threads and remains close to \(3.02\times\) at 32 threads. With moderate skew, \texttt{skewed\_90\_5}, the curve is lower and peaks earlier, at about \(2.36\times\) with 8 threads, then stays near \(2.1\times\) at 16 and 32 threads. With the strongest skew, \texttt{skewed\_90\_1}, the 2-thread case is almost ideal, but the curve then decreases to about \(1.30\times\) at 32 threads, because increasing \(N\) also increases the hot partitions and duplicate-key work that cannot be spread as evenly.
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.74\linewidth]{../img/013_weak_scalability_scaled_speedup_by_dataset.png}
-    \caption{Weak-scaling scaled speedup for uniform and skewed datasets.}
-    \label{fig:weak-scaling}
-\end{figure}
-
-
 % Strong scalability
 \subsection{Strong scalability}
 Strong scaling shows a different effect of skew because the input size is fixed and the baseline is the 1-thread execution of each dataset. Uniform data improves regularly up to about \(4.92\times\) at 32 threads and then saturates at 64 threads. The moderate-skew case, \texttt{skewed\_90\_5}, has a slower 1-thread baseline and still contains enough work to split across threads, so its relative speedup is higher, reaching about \(6.48\times\) at 64 threads. The strongest skew, \texttt{skewed\_90\_1}, is not monotonic: it reaches about \(3.13\times\) at 2 threads, then stays below \(3\times\) for the larger thread counts. This shows that, when only a few hot partitions dominate the join, adding threads gives limited benefit even with workload balancing.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.74\linewidth]{../img/011_strong_scalability_speedup_by_dataset.png}
-    \caption{Strong-scaling speedup for the dedicated workload-balanced OpenMP executable.}
-    \label{fig:strong-scaling}
+    \begin{minipage}[t]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{../img/013_weak_scalability_scaled_speedup_by_dataset.png}
+        \caption{Weak-scaling scaled speedup for uniform and skewed datasets.}
+        \label{fig:weak-scaling}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{../img/011_strong_scalability_speedup_by_dataset.png}
+        \caption{Strong-scaling speedup for the dedicated workload-balanced OpenMP executable.}
+        \label{fig:strong-scaling}
+    \end{minipage}
 \end{figure}
 
 
@@ -223,6 +225,6 @@ The OpenMP implementations preserve the previous algorithm and make the scheduli
 
 The scalability results confirm the same trend: uniform data scales more regularly, moderate skew can still exploit extra threads, while the strongest skew quickly becomes limited by hot partitions and duplicate-key work.
 
-Compared with the best C++ threaded result from Module 2, the best OpenMP result is close but slightly slower in the broad campaign. The main benefit of this module is therefore not a new absolute minimum, but a clearer understanding of which OpenMP constructs are sufficient and how join-work decomposition affects uniform and skewed workloads.
+Compared with the best C++ threaded result from Module 2, the best OpenMP result is close but slightly slower in the final campaign. The main benefit of this module is therefore not a new absolute minimum, but a clearer understanding of which OpenMP constructs are sufficient and how join-work decomposition affects uniform and skewed workloads.
 
 \end{document}

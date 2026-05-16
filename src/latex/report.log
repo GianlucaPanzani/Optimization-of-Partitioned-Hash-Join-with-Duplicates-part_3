@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.12.28)  16 MAY 2026 16:53
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.12.28)  16 MAY 2026 17:28
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -399,33 +399,34 @@ File: ../img/013_weak_scalability_scaled_speedup_by_dataset.png Graphic file (t
 ype png)
 <use ../img/013_weak_scalability_scaled_speedup_by_dataset.png>
 Package pdftex.def Info: ../img/013_weak_scalability_scaled_speedup_by_dataset.
-png  used on input line 196.
-(pdftex.def)             Requested size: 335.19873pt x 215.37827pt.
+png  used on input line 202.
+(pdftex.def)             Requested size: 203.83417pt x 130.96773pt.
 <../img/011_strong_scalability_speedup_by_dataset.png, id=132, 533.995pt x 349.
 305pt>
 File: ../img/011_strong_scalability_speedup_by_dataset.png Graphic file (type p
 ng)
 <use ../img/011_strong_scalability_speedup_by_dataset.png>
 Package pdftex.def Info: ../img/011_strong_scalability_speedup_by_dataset.png  
-used on input line 208.
-(pdftex.def)             Requested size: 335.19873pt x 219.27448pt.
+used on input line 209.
+(pdftex.def)             Requested size: 203.83417pt x 133.33423pt.
 
 
-[5 <../img/013_weak_scalability_scaled_speedup_by_dataset.png>]
+[5 <../img/013_weak_scalability_scaled_speedup_by_dataset.png> <../img/011_stro
+ng_scalability_speedup_by_dataset.png>]
 
-[6 <../img/011_strong_scalability_speedup_by_dataset.png>] (./report.aux)
+[6] (./report.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
 Package rerunfilecheck Info: File `report.out' has not changed.
-(rerunfilecheck)             Checksum: 52E1F4B324D9E5BB7EF42BA54C84D8D3;1949.
+(rerunfilecheck)             Checksum: 8E42E4871C07BA9986FA1C68F0BD7BE2;1949.
  ) 
 Here is how much of TeX's memory you used:
- 9253 strings out of 473190
- 145860 string characters out of 5715799
- 564101 words of memory out of 5000000
- 32383 multiletter control sequences out of 15000+600000
+ 9255 strings out of 473190
+ 145920 string characters out of 5715799
+ 564004 words of memory out of 5000000
+ 32385 multiletter control sequences out of 15000+600000
  564545 words of font info for 56 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  75i,10n,79p,1040b,469s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -443,7 +444,7 @@ live/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/local/texli
 ve/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb></usr/local/texliv
 e/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt8.pfb></usr/local/texlive/
 2025/texmf-dist/fonts/type1/public/cm-super/sfrm1095.pfb>
-Output written on report.pdf (8 pages, 555183 bytes).
+Output written on report.pdf (8 pages, 553683 bytes).
 PDF statistics:
  216 PDF objects out of 1000 (max. 8388607)
  166 compressed objects within 2 object streams
