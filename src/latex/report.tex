@@ -42,9 +42,7 @@
 \subsection{Executable variants}
 The repository contains one sequential baseline and six OpenMP executables which are compared with each other. There are three OpenMP families based on the type of parallelization strategy: \texttt{loop}, \texttt{task} and \texttt{taskloop}. The last one is added only as an experimental comparison, to see whether OpenMP's taskloop construct behaves closer to manual tasks or to ordinary loop scheduling. Each family also has a \texttt{\_wb} version that adds workload balancing on the join phase. All OpenMP versions use the same flat open-addressing count table in the local build/probe phase, so the comparison is mostly about the parallel execution model and scheduling policy, not about a different join algorithm. At the end we have the following seven executables: \texttt{hashjoin\_seq}, \texttt{hashjoin\_omp\_loop}, \texttt{hashjoin\_omp\_loop\_wb}, \texttt{hashjoin\_omp\_task}, \texttt{hashjoin\_omp\_task\_wb}, \texttt{hashjoin\_omp\_taskloop} and \texttt{hashjoin\_omp\_taskloop\_wb}.
 
-% Workflow
-\subsection{Workflow}
-The implementation workflow strategy is the following:
+The adopted implementation workflow strategy was the following:
 \begin{itemize}
     \item implement the OpenMP variants,
     \item run correctness checks,
@@ -80,14 +78,9 @@ The taskloop version preserves the loop-shaped formulation but asks OpenMP to ge
 \subsection{Join phase}
 After partitioning, the join phase is naturally parallel because partition \(p\) of \(R\) only has to be joined with partition \(p\) of \(S\). In other words, for each pair of partitions the join is independent.
 
-The non-\texttt{\_wb} loop version expresses this with an OpenMP \texttt{for} loop over the partition ids and combines the final \texttt{join\_count}, \texttt{checksum1} and \texttt{checksum2} with an OpenMP \texttt{reduction}. The non-\texttt{\_wb} task versions instead create OpenMP tasks for groups of partition joins and each task writes its result into a private \texttt{partial} slot.
+The non-\texttt{\_wb} loop version expresses this with an OpenMP \texttt{for} loop over the partition ids and combines the final \texttt{join\_count}, \texttt{checksum1} and \texttt{checksum2} with an OpenMP \texttt{reduction}.
 
-The important distinction is between the non-\texttt{\_wb} and the \texttt{\_wb} executables. In the non-\texttt{\_wb} versions, the join work is submitted to OpenMP in the natural partition-id order \(0,\ldots,P-1\). This is simple and works well when the dataset is uniform, because partitions have similar sizes and each local join has roughly similar cost.
-With skewed datasets, however, some partitions contain many more records and duplicate matches. Then a raw partition-id order can create a tail effect: most threads finish their small partitions while some few threads remain busy on hot partitions. The \texttt{\_wb} variants address this by keeping the same local hash-join logic, but changing the work list given to OpenMP. Before the join starts, the work of each partition is estimated as
-\[
-    |R_p| + |S_p|,
-\]
-and a target amount of records per join thread is computed. Partitions are sorted from largest to smallest and large partitions are assigned more than one logical thread by splitting their \(S_p\) probe range into subranges. Each subrange builds a private count table over the corresponding \(R_p\) partition, probes only its assigned part of \(S_p\), and writes into a private result slot; therefore no mutex is needed in the join hot path.
+The non-\texttt{\_wb} task versions instead create OpenMP tasks for groups of partition joins and each task writes its result into a private \texttt{partial} slot.
 
 \begin{figure}[H]
     \centering
@@ -95,6 +88,10 @@ and a target amount of records per join thread is computed. Partitions are sorte
     \caption{Comparison between partition and join times for each dataset type and executables combination.}
     \label{fig:partition-join-time}
 \end{figure}
+
+The important distinction is between the non-\texttt{\_wb} and the \texttt{\_wb} executables. In the non-\texttt{\_wb} versions, the join work is submitted to OpenMP in the natural partition-id order \(0,\ldots,P-1\). This is simple and works well when the dataset is uniform, because partitions have similar sizes and each local join has roughly similar cost.
+With skewed datasets, however, some partitions contain many more records and duplicate matches. Then a raw partition-id order can create a tail effect: most threads finish their small partitions while some few threads remain busy on hot partitions. The \texttt{\_wb} variants address this by keeping the same local hash-join logic, but changing the work list given to OpenMP. 
+Before the join starts, the work of each partition is estimated as \(|R_p| + |S_p|\), and a target amount of records per join thread is computed. Partitions are sorted from largest to smallest and large partitions are assigned more than one logical thread by splitting their \(S_p\) probe range into subranges. Each subrange builds a private count table over the corresponding \(R_p\) partition, probes only its assigned part of \(S_p\), and writes into a private result slot; therefore no mutex is needed in the join hot path.
 
 
 % Results Analysis
