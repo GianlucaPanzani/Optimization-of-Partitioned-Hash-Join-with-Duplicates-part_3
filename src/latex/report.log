@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.12.28)  16 MAY 2026 17:36
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.12.28)  16 MAY 2026 20:17
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -350,10 +350,18 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 
 
 [1]
+LaTeX Font Info:    Trying to load font information for OMS+cmr on input line 6
+1.
+ (/usr/local/texlive/2025/texmf-dist/tex/latex/base/omscmr.fd
+File: omscmr.fd 2024/11/19 v2.5n Standard LaTeX font definitions
+)
+LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10.95> not available
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 61.
+
 
 [1{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc
 }]
-<../img/005_selected_best_phase_breakdown_50000000_50000000_1000000.png, id=96,
+<../img/005_selected_best_phase_breakdown_50000000_50000000_1000000.png, id=97,
  826.6885pt x 384.2355pt>
 File: ../img/005_selected_best_phase_breakdown_50000000_50000000_1000000.png Gr
 aphic file (type png)
@@ -371,7 +379,7 @@ ile (type png)
 <use ../img/007_strong_scaling_speedup_50000000_50000000_1000000.png>
 Package pdftex.def Info: ../img/007_strong_scaling_speedup_50000000_50000000_10
 00000.png  used on input line 103.
-(pdftex.def)             Requested size: 389.55266pt x 92.52773pt.
+(pdftex.def)             Requested size: 407.66833pt x 96.8365pt.
 LaTeX Font Info:    External font `cmex10' loaded for size
 (Font)              <7> on input line 119.
 LaTeX Font Info:    External font `cmex10' loaded for size
@@ -397,7 +405,7 @@ File: ../img/013_weak_scalability_scaled_speedup_by_dataset.png Graphic file (t
 ype png)
 <use ../img/013_weak_scalability_scaled_speedup_by_dataset.png>
 Package pdftex.def Info: ../img/013_weak_scalability_scaled_speedup_by_dataset.
-png  used on input line 199.
+png  used on input line 200.
 (pdftex.def)             Requested size: 203.83417pt x 130.96773pt.
 <../img/011_strong_scalability_speedup_by_dataset.png, id=127, 533.995pt x 349.
 305pt>
@@ -405,7 +413,7 @@ File: ../img/011_strong_scalability_speedup_by_dataset.png Graphic file (type p
 ng)
 <use ../img/011_strong_scalability_speedup_by_dataset.png>
 Package pdftex.def Info: ../img/011_strong_scalability_speedup_by_dataset.png  
-used on input line 206.
+used on input line 207.
 (pdftex.def)             Requested size: 203.83417pt x 133.33423pt.
 
 
@@ -417,18 +425,14 @@ ng_scalability_speedup_by_dataset.png>]
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
-
-
-LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
-
 Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: D8A7198BAC4D7FAFE2DAC64E7A6685C3;1850.
  ) 
 Here is how much of TeX's memory you used:
- 9253 strings out of 473190
- 145892 string characters out of 5715799
+ 9274 strings out of 473190
+ 146270 string characters out of 5715799
  562004 words of memory out of 5000000
- 32384 multiletter control sequences out of 15000+600000
+ 32402 multiletter control sequences out of 15000+600000
  564545 words of font info for 56 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  75i,10n,79p,1040b,469s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -446,7 +450,7 @@ live/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/local/texli
 ve/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb></usr/local/texliv
 e/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt8.pfb></usr/local/texlive/
 2025/texmf-dist/fonts/type1/public/cm-super/sfrm1095.pfb>
-Output written on report.pdf (8 pages, 553271 bytes).
+Output written on report.pdf (8 pages, 554020 bytes).
 PDF statistics:
  211 PDF objects out of 1000 (max. 8388607)
  161 compressed objects within 2 object streams
