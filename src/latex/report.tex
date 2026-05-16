@@ -40,7 +40,7 @@
 
 % Executable variants
 \subsection{Executable variants}
-The repository contains one sequential baseline and six OpenMP executables which are compared each other. There are three kind of OpenMP families based on the type of parallelization strategy: \texttt{loop}, \texttt{task} and \texttt{taskloop}. The last one is added only as an experimental comparison, to see whether OpenMP's taskloop construct behaves closer to manual tasks or to ordinary loop scheduling. Each family also has a \texttt{\_wb} version that adds workload balancing on the join phase. All versions use the same flat open-addressing count table in the local build/probe phase, so the comparison is mostly about the parallel execution model and scheduling policy, not about a different join algorithm. So at the end we have the following seven executables: \texttt{hashjoin\_seq}, \texttt{hashjoin\_omp\_loop}, \texttt{hashjoin\_omp\_loop\_wb}, \texttt{hashjoin\_omp\_task}, \texttt{hashjoin\_omp\_task\_wb}, \texttt{hashjoin\_omp\_taskloop} and \texttt{hashjoin\_omp\_taskloop\_wb}.
+The repository contains one sequential baseline and six OpenMP executables which are compared with each other. There are three OpenMP families based on the type of parallelization strategy: \texttt{loop}, \texttt{task} and \texttt{taskloop}. The last one is added only as an experimental comparison, to see whether OpenMP's taskloop construct behaves closer to manual tasks or to ordinary loop scheduling. Each family also has a \texttt{\_wb} version that adds workload balancing on the join phase. All OpenMP versions use the same flat open-addressing count table in the local build/probe phase, so the comparison is mostly about the parallel execution model and scheduling policy, not about a different join algorithm. At the end we have the following seven executables: \texttt{hashjoin\_seq}, \texttt{hashjoin\_omp\_loop}, \texttt{hashjoin\_omp\_loop\_wb}, \texttt{hashjoin\_omp\_task}, \texttt{hashjoin\_omp\_task\_wb}, \texttt{hashjoin\_omp\_taskloop} and \texttt{hashjoin\_omp\_taskloop\_wb}.
 
 % Workflow
 \subsection{Workflow}
@@ -58,11 +58,11 @@ The implementation workflow strategy is the following:
 \subsection{Parameters}
 The benchmark scripts run Slurm jobs on one node of the \texttt{spmcluster} and append one CSV row per configuration in \texttt{src/results/}. The fixed parameters of the main campaign are \(N_R=N_S=50\,000\,000\), \(P=256\), \texttt{seed=13}, \texttt{max\_key=1\,000\,000} and block size \(32768\) in the reduced grid.
 
-The parameters of the final grids were not chosen directly. Initially i've created a larger grid for each family type and then, analyzing the relative notebook files, i've chosen the most promising values because of the huge amount of combinations. The grid of the \texttt{loop} family explores OpenMP schedules (\texttt{static}, \texttt{dynamic}, \texttt{guided}), chunk sizes, partition/join thread counts and partition block sizes. The grid of the \texttt{task} one explores the number of input blocks per partition task, the number of partitions per join task, offset-task granularity and thread counts. And the grid of the experimental \texttt{taskloop} family explores the same decomposition through \texttt{taskloop} grainsizes.
+The parameters of the final grids were not chosen directly. Initially I created a larger grid for each family type and then, analyzing the relative notebook files, I chose the most promising values because of the huge amount of combinations. The grid of the \texttt{loop} family explores OpenMP schedules (\texttt{static}, \texttt{dynamic}, \texttt{guided}), chunk sizes, partition/join thread counts and partition block sizes. The grid of the \texttt{task} one explores the number of input blocks per partition task, the number of partitions per join task, offset-task granularity and thread counts. The grid of the experimental \texttt{taskloop} family explores the same decomposition through \texttt{taskloop} grainsizes.
 
 The reduced grid used for the final results keeps the most stable choices found by those statistics files: guided scheduling for loop variants, explicit task grains in the range 2--4 for the task variants, taskloop grains in the range 2--8 for the experimental taskloop variants, 32 join threads for each family, and 32 or 64 partition threads.
 
-Three datasets are measured. The uniform dataset is the same pseudo-random generation scheme used in the previous module. The skewed datasets are generated with the format \texttt{skewed\_R\_H} with: \(R\%\) percentage of records sampled from keys that map to the first \(H\%\) of partitions. In the final grids i've used \texttt{skewed\_90\_5} and \texttt{skewed\_90\_1}, which concentrate 90\% of the records respectively into about 13 and 3 hot partitions.
+Three datasets are measured in the OpenMP variants. The uniform dataset is the same pseudo-random generation scheme used in the previous module. The skewed datasets are generated with the format \texttt{skewed\_R\_H}: \(R\%\) of records are sampled from keys that map to the first \(H\%\) of partitions. In the final grids I used \texttt{skewed\_90\_5} and \texttt{skewed\_90\_1}, which concentrate 90\% of the records respectively into about 13 and 3 hot partitions. The sequential executable accepts the same dataset labels for the CSV schema, but it still generates the uniform input; therefore the skewed-workload analysis is based on the OpenMP rows and the dedicated scaling executables.
 
 
 % Parallelization Strategy
@@ -99,7 +99,7 @@ and a target amount of records per join thread is computed. Partitions are sorte
 
 % Results Analysis
 \section{Results Analysis}
-All results below can be found in the \texttt{statistics.ipynb} notebook whose analyzed data are picked from \texttt{src/results/*.csv}. The best Module 2 C++ threaded result was \(0.507\) s for \texttt{hashjoin\_par\_pj\_wb\_map}; the best averaged broad-grid OpenMP result here is \(0.553\) s, so the final OpenMP implementation is close in absolute time but does not clearly improve over the previous C++ threaded best case. This section covers the main Module 3 comparison: sequential baseline, OpenMP loop, OpenMP tasks, the extra taskloop experiment, uniform/skewed workloads, and the previous C++ threaded implementation.
+All results below can be found in the \texttt{statistics.ipynb} notebook whose analyzed data are picked from \texttt{src/results/*.csv}. The best Module 2 C++ threaded result was \(0.507\) s for \texttt{hashjoin\_par\_pj\_wb\_map}; the best averaged OpenMP result in the final campaign is \(0.553\) s, so the final OpenMP implementation is close in absolute time but does not clearly improve over the previous C++ threaded best case. This section covers the main Module 3 comparison: sequential baseline, OpenMP loop, OpenMP tasks, the extra taskloop experiment, uniform/skewed workloads, and the previous C++ threaded implementation.
 
 \begin{figure}[H]
     \centering
@@ -131,14 +131,14 @@ Inside the required implementations, explicit tasks are slightly faster than loo
         \texttt{omp\_taskloop\_wb} & 64 & 32 & 0.558 & \(6.03\times\) \\
         \bottomrule
     \end{tabular}
-    \caption{Best observed uniform-dataset configuration per OpenMP executable.}
+    \caption{Best averaged uniform-dataset configuration per OpenMP executable.}
     \label{tab:uniform-best}
 \end{table}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.82\linewidth]{../img/004_selected_best_Speedup_vs_Sequential_version_50000000_50000000_1000000.png}
-    \caption{Best speedup against the sequential baseline for the current OpenMP campaign.}
+    \caption{Best ratio against the sequential CSV baseline for the current OpenMP campaign.}
     \label{fig:selected-best}
 \end{figure}
 
@@ -154,7 +154,7 @@ Therefore the slowdown is not only scheduling overhead: the hot partitions also 
     \scriptsize
     \begin{tabular}{llrrrrr}
         \toprule
-        Dataset & Variant & \(T_{part}\) & \(T_{join}\) & Best time [s] & Join time [s] & Speedup \\
+        Dataset & Variant & \(T_{part}\) & \(T_{join}\) & Best time [s] & Join time [s] & Time ratio \\
         \midrule
         \texttt{skewed\_90\_5} & \texttt{omp\_loop} & 32 & 32 & 1.323 & 0.966 & \(2.56\times\) \\
         \texttt{skewed\_90\_5} & \texttt{omp\_loop\_wb} & 32 & 32 & 0.769 & 0.413 & \(4.40\times\) \\
@@ -171,11 +171,11 @@ Therefore the slowdown is not only scheduling overhead: the hot partitions also 
         \texttt{skewed\_90\_1} & \texttt{omp\_taskloop\_wb} & 64 & 32 & 2.912 & 2.586 & \(1.15\times\) \\
         \bottomrule
     \end{tabular}
-    \caption{Best observed skewed-dataset result for each OpenMP executable, using the sequential row with the same dataset label as baseline.}
+    \caption{Best averaged skewed-dataset result for each OpenMP executable. The last column is the ratio against the sequential row with the same dataset label; in the current code that sequential row is only a labeled uniform baseline.}
     \label{tab:skewed-best}
 \end{table}
 
-The workload-balanced loop version has the higher improvement with skewness, but is anyway slower than the task version. For \texttt{skewed\_90\_5}, the loop version improves from \(1.323\) s to \(0.769\) s when workload balancing is enabled. For \texttt{skewed\_90\_1}, the same change improves from \(2.573\) s to \(1.670\) s. The strongest skew still remains slower because splitting the probe side of a hot partition helps load balance but also repeats the \(R_p\) build work for each subrange.
+The workload-balanced loop version has the largest improvement with skewness, but is still slower than the task version. For \texttt{skewed\_90\_5}, the loop version improves from \(1.323\) s to \(0.769\) s when workload balancing is enabled. For \texttt{skewed\_90\_1}, the same change improves from \(2.573\) s to \(1.670\) s. The strongest skew still remains slower because splitting the probe side of a hot partition helps load balance but also repeats the \(R_p\) build work for each subrange.
 
 Explicit tasks give the best required result on both skewed datasets in the current averaged campaign: \texttt{omp\_task} reaches \(0.636\) s on \texttt{skewed\_90\_5}, while \texttt{omp\_task\_wb} reaches \(1.501\) s on \texttt{skewed\_90\_1}. The extra taskloop implementation remains useful experimentally, but its workload-balanced version is mixed in these runs.
 
@@ -215,7 +215,7 @@ Strong scaling shows a different effect of skew because the input size is fixed 
 \section{Correctness Validation}
 Correctness is checked at two levels. For small inputs, \(N_R \leq 500\) and \(N_S \leq 500\), each executable runs the naive \(O(N_RN_S)\) verifier and compares its \texttt{join\_count}, \texttt{checksum1} and \texttt{checksum2} with the optimized result. If the comparison succeeds, the executable prints and records \texttt{verified=true}; if it fails, it prints \texttt{verified=false} and exits with an error. The checker therefore treats \texttt{verified=true} outputs as already validated by the exact naive oracle.
 
-For benchmark-size inputs, where the naive verifier is too expensive, \texttt{checker.cpp} scans the Slurm output files and compares \texttt{join\_count}, \texttt{checksum1} and \texttt{checksum2} for each executable and dataset type.
+For benchmark-size inputs, where the naive verifier is too expensive, \texttt{checker.cpp} scans the Slurm output files and compares \texttt{join\_count}, \texttt{checksum1} and \texttt{checksum2} within each executable and dataset-type group. This checks that repeated runs of the same configuration family are deterministic and mutually consistent; it is not a cross-executable reference checker.
 
 % Conclusions
 \section{Conclusions}

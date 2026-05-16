@@ -73,6 +73,7 @@
 //
 
 #include <chrono>
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
@@ -143,7 +144,7 @@ static void usage(const char* prog) {
         << "  -seed       Deterministic seed\n"
         << "  -max-key    Keys are generated in [0, max-key)\n"
         << "  -p          Number of partitions (power of two required in this reference code)\n"
-        << "  --dataset-type / -dataset-type             Dataset type label written to output\n"
+        << "  --dataset-type / -dataset-type             uniform|skewed_<record_pct>_<hot_partition_pct>\n"
         << "  --partition-threads / -partition-threads   Number of threads for partition phase (reserved)\n"
         << "  --join-threads / -join-threads             Number of threads for join phase (reserved)\n";
 }
@@ -188,6 +189,58 @@ static DatasetMetadata dataset_metadata_from_type(const std::string& dataset_typ
     return metadata;
 }
 
+// ------------------------------------------------------------
+// Dataset distribution configuration
+// ------------------------------------------------------------
+// Supported format:
+//   uniform
+//   skewed_<record_percentage>_<hot_partition_percentage>
+// Example:
+//   skewed_80_5 means: 80% of records are generated from keys mapping to
+//   5% of the partitions. This creates partition-level workload imbalance.
+struct DatasetConfig {
+    std::string type = "uniform";
+    bool skewed = false;
+    std::uint32_t skew_record_percent = 0;
+    std::uint32_t hot_partition_percent = 100;
+};
+
+static bool parse_dataset_type(const std::string& value, DatasetConfig& cfg) {
+    cfg.type = value;
+    cfg.skewed = false;
+    cfg.skew_record_percent = 0;
+    cfg.hot_partition_percent = 100;
+
+    if (value == "uniform") {
+        return true;
+    }
+
+    const std::string prefix = "skewed_";
+    if (value.rfind(prefix, 0) != 0) {
+        return false;
+    }
+
+    const std::string rest = value.substr(prefix.size());
+    const std::size_t sep = rest.find('_');
+    if (sep == std::string::npos) {
+        return false;
+    }
+
+    try {
+        const unsigned long rec = std::stoul(rest.substr(0, sep));
+        const unsigned long hot = std::stoul(rest.substr(sep + 1));
+        if (rec > 100 || hot == 0 || hot > 100) {
+            return false;
+        }
+        cfg.skewed = true;
+        cfg.skew_record_percent = static_cast<std::uint32_t>(rec);
+        cfg.hot_partition_percent = static_cast<std::uint32_t>(hot);
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
 
 // ------------------------------------------------------------
 // Deterministic pseudo-random generation
@@ -213,14 +266,35 @@ static inline std::uint64_t splitmix64_next(std::uint64_t& state) {
     return splitmix64_mix(state);
 }
 
+static inline std::uint32_t compute_partition_id(std::uint64_t key, std::uint32_t P);
+static std::vector<std::uint64_t> build_skew_key_pool(std::uint32_t P,
+                                                       std::uint64_t max_key,
+                                                       std::uint32_t hot_partition_percent);
 
-static std::vector<Record> generate_relation(std::size_t n, std::uint64_t seed, std::uint64_t max_key) {
+static std::vector<Record> generate_relation(std::size_t n,
+                                             std::uint64_t seed,
+                                             std::uint64_t max_key,
+                                             std::uint32_t P,
+                                             const DatasetConfig& dataset_cfg) {
     std::vector<Record> out(n);
     std::uint64_t state = seed;
 
+    std::vector<std::uint64_t> skew_key_pool;
+    if (dataset_cfg.skewed && dataset_cfg.skew_record_percent > 0) {
+        skew_key_pool = build_skew_key_pool(P, max_key, dataset_cfg.hot_partition_percent);
+        if (skew_key_pool.empty()) {
+            throw std::runtime_error("Unable to generate skewed dataset: no keys map to hot partitions. Increase max-key or hot partition percentage.");
+        }
+    }
+
     for (std::size_t i = 0; i < n; ++i) {
         const std::uint64_t r = splitmix64_next(state);
-        out[i].key = (max_key == 0) ? 0ULL : (r % max_key);
+        if (!skew_key_pool.empty() && (r % 100ULL) < dataset_cfg.skew_record_percent) {
+            const std::uint64_t idx = splitmix64_next(state) % static_cast<std::uint64_t>(skew_key_pool.size());
+            out[i].key = skew_key_pool[static_cast<std::size_t>(idx)];
+        } else {
+            out[i].key = (max_key == 0) ? 0ULL : (r % max_key);
+        }
     }
     return out;
 }
@@ -246,6 +320,26 @@ static inline std::uint32_t compute_partition_id(std::uint64_t key, std::uint32_
     key ^= key >> 17;
     key ^= key >> 9;
     return static_cast<std::uint32_t>(key) & mask;
+}
+
+static std::vector<std::uint64_t> build_skew_key_pool(std::uint32_t P,
+                                                       std::uint64_t max_key,
+                                                       std::uint32_t hot_partition_percent) {
+    const std::uint32_t hot_partitions = std::max<std::uint32_t>(
+        1U,
+        static_cast<std::uint32_t>((static_cast<std::uint64_t>(P) * hot_partition_percent + 99ULL) / 100ULL)
+    );
+
+    std::vector<std::uint64_t> pool;
+    const std::uint64_t key_limit = (max_key == 0) ? 1ULL : max_key;
+    pool.reserve(static_cast<std::size_t>(std::min<std::uint64_t>(key_limit, 1ULL << 20)));
+
+    for (std::uint64_t key = 0; key < key_limit; ++key) {
+        if (compute_partition_id(key, P) < hot_partitions) {
+            pool.push_back(key);
+        }
+    }
+    return pool;
 }
 
 // ------------------------------------------------------------
@@ -594,13 +688,20 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    DatasetConfig dataset_cfg;
+    if (!parse_dataset_type(dataset_type_name, dataset_cfg)) {
+        std::cerr << "Error: invalid dataset type '" << dataset_type_name
+                  << "'. Use uniform or skewed_<record_percentage>_<hot_partition_percentage>, e.g. skewed_80_5.\n";
+        return 1;
+    }
+
     const std::size_t NR = static_cast<std::size_t>(nr);
     const std::size_t NS = static_cast<std::size_t>(ns);
 
     // Deterministic generation.
     // We use two different seeds so that R and S are not identical.
-    const auto R = generate_relation(NR, seed, max_key);
-    const auto S = generate_relation(NS, seed ^ 0xdeadebdecdeedef1ULL, max_key);
+    const auto R = generate_relation(NR, seed, max_key, P, dataset_cfg);
+    const auto S = generate_relation(NS, seed ^ 0xdeadebdecdeedef1ULL, max_key, P, dataset_cfg);
 
     // Time only the join pipeline, not input generation.
     double t0 = get_time();
